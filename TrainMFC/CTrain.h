@@ -46,7 +46,7 @@ public:
 
 
 	BITMAP bmpInfo;  //비트맵
-	CWinThread* m_thread_move[3];  //열차 쓰레드
+	CWinThread* m_thread_move[5];  //열차 쓰레드
 	ThreadArg arg1;
 	HwndArg hWndArg;
 
@@ -59,4 +59,5 @@ public:
 	CStatic testText1;
 	CStatic testText2;
 
+	CEdit trainAreaNumber;
 };
