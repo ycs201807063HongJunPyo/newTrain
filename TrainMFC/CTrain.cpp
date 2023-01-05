@@ -13,10 +13,10 @@
 IMPLEMENT_DYNAMIC(CTrain, CDialog)
 
 //열차 구역
-int railTopLeft[RAIL_NUM] = { 10,110,210,310,410,410,410,310,210,110,10,10,10 };
-int railTopRight[RAIL_NUM] = { 110,210,310,410,510,510,510,410,310,210,110,110,110 };
-int railBottomLeft[RAIL_NUM] = { 10,10,10,10,10,60,110,110,110,110,110,60,10 };
-int railBottomRight[RAIL_NUM] = { 60,60,60,60,60,110,160,160,160,160,160,110,60 };
+int railTopLeft[RAIL_NUM] = { 10,110,210,310,410,410,410,310,210,110,10,10,10 };		// 좌
+int railTopRight[RAIL_NUM] = { 110,210,310,410,510,510,510,410,310,210,110,110,110 };	// 우
+int railBottomLeft[RAIL_NUM] = { 10,10,10,10,10,60,110,110,110,110,110,60,10 };			// 상
+int railBottomRight[RAIL_NUM] = { 60,60,60,60,60,110,160,160,160,160,160,110,60 };		// 하
 
 int testRailTopLeft[RAIL_NUM] = { 520, 620, 720, 820, 820, 920, 920, 920, 820, 720, 720, 620, 520 };
 int testRailTopRight[RAIL_NUM] = { 620, 720, 820, 920, 920, 1020, 1020, 1020, 920, 820, 820, 720, 620 };
@@ -380,7 +380,7 @@ UINT DrawObject(LPVOID param, int type)
 					Sleep(1000);
 					stationCount++;
 					if (stationCount == 5) {
-						trainSpeed = 400;
+						trainSpeed = trainX - 30;
 						flag = 1;
 					}
 				}
@@ -467,6 +467,8 @@ UINT TestDrawObject(LPVOID param)
 	CRect testtmpRect;
 	BOOL testRectResult;
 
+	BOOL changeDirection[2] = { FALSE, FALSE };
+
 	rect = CRect(trainSpeed + 500, 20, 30 + trainSpeed + 500, 50);
 	dc.Attach(hdc);
 
@@ -519,13 +521,17 @@ UINT TestDrawObject(LPVOID param)
 
 			if (IntersectRect(tmpRect, rect, CRect(testRailTopLeft[stationCount], testRailBottomLeft[stationCount], testRailTopRight[stationCount], testRailBottomRight[stationCount])) && stationCount >= 0)
 			{
-				//testInsCheck[stationCount] = TRUE;
+				testInsCheck[stationCount] = TRUE;
 			}
 			dc.SelectObject(oldBrush);
 
 			dc.Rectangle(rect);
 
 			MainRectTest = rect;
+
+			CString tmp;
+			tmp.Format(_T("%d %d %d %d\n"), rect.left, rect.top, subStationCount, stationCount);
+			OutputDebugStringW(tmp);
 
 			if (IntersectRect(tmpRect, MainRectTest, CRect(testRailTopLeft[stationCount], testRailBottomLeft[stationCount], testRailTopRight[stationCount], testRailBottomRight[stationCount])) && stationCount >= 0)
 			{
@@ -534,7 +540,7 @@ UINT TestDrawObject(LPVOID param)
 				oldBrush = dc.SelectObject(&brush);
 				dc.Rectangle(testRailTopLeft[stationCount], testRailBottomLeft[stationCount], testRailTopRight[stationCount], testRailBottomRight[stationCount]);
 				//이전 부분과 충돌이 있을경우에만 무효화 해주기
-				if (IntersectRect(tmpRect, MainRectTest, CRect(testRailTopLeft[subStationCount], testRailBottomLeft[subStationCount], testRailTopRight[subStationCount], testRailBottomRight[subStationCount])) && !testInsCheck[subStationCount]) {
+				if (IntersectRect(tmpRect, MainRectTest, CRect(testRailTopLeft[subStationCount], testRailBottomLeft[subStationCount], testRailTopRight[subStationCount], testRailBottomRight[subStationCount])) && !testInsCheck[subStationCount] && stationCount >= 1) {
 					InvalidateRect(pArg->hwnd, CRect(testRailTopLeft[stationCount - 1], testRailBottomLeft[stationCount - 1], testRailTopRight[stationCount - 1], testRailBottomRight[stationCount - 1]), TRUE);
 				}
 
@@ -549,6 +555,72 @@ UINT TestDrawObject(LPVOID param)
 
 			}
 
+			// 위, 아래 이동
+			if (testRailTopLeft[stationCount] == testRailTopLeft[subStationCount] && testRailBottomLeft[stationCount] != testRailBottomLeft[subStationCount] && stationCount >= 1)
+			{
+				changeDirection[1] = TRUE;
+
+				if (changeDirection[0])
+				{
+					trainSpeed = trainY - 30;
+					changeDirection[0] = FALSE;
+				}
+
+				flag = testRailBottomLeft[stationCount] != testRailBottomLeft[subStationCount] && testRailBottomLeft[stationCount] > testRailBottomLeft[subStationCount] ? 2 : 4;	// T : 하, F : 상
+				
+				if ((30 + trainSpeed) == testRailBottomRight[stationCount] - 10)
+				{
+					subStationCount = stationCount;
+					Sleep(1000);
+					stationCount++;
+				}
+			}
+
+			//int testRailTopLeft[RAIL_NUM] = { 520, 620, 720, 820, 820, 920, 920, 920, 820, 720, 720, 620, 520 };
+			//int testRailTopRight[RAIL_NUM] = { 620, 720, 820, 920, 920, 1020, 1020, 1020, 920, 820, 820, 720, 620 };
+			//int testRailBottomLeft[RAIL_NUM] = { 10,10,10,10, 60, 60, 110, 160, 160, 160, 110, 110, 110 };
+			//int testRailBottomRight[RAIL_NUM] = { 60,60,60,60, 110, 110, 160, 210, 210, 210, 160, 160, 160 };
+
+			// 좌, 우 이동
+			else if (testRailTopLeft[stationCount] != testRailTopLeft[subStationCount] && testRailBottomLeft[stationCount] == testRailBottomLeft[subStationCount] && stationCount >= 1)
+			{
+				changeDirection[0] = TRUE;
+
+				if (changeDirection[1])
+				{
+					trainSpeed = trainX - 30;
+					changeDirection[1] = FALSE;
+				}
+
+				flag = testRailTopLeft[stationCount] != testRailTopLeft[subStationCount] && testRailTopLeft[stationCount] < testRailTopLeft[subStationCount] ? 3 : 1;	// T : 좌, F : 우
+
+				if ((50 + trainSpeed + 500) == testRailTopRight[stationCount])
+				{
+					subStationCount = stationCount;
+					Sleep(1000);
+					stationCount++;
+				}
+			}
+
+			// 생성 후 이동
+			else if (stationCount == 0)
+			{
+				if ((1 == flag || 3 == flag) && (50 + trainSpeed + 500) == testRailTopRight[stationCount])
+				{
+					subStationCount = stationCount;
+					Sleep(1000);
+					stationCount++;
+				}
+				else if ((2 == flag || 4 == flag) && (30 + trainSpeed) == testRailBottomRight[stationCount] - 10)
+				{
+					subStationCount = stationCount;
+					Sleep(1000);
+					stationCount++;
+				}
+				
+			}
+
+			/*
 			//정차, 방향 조정
 			if (stationCount <= 3 && (50 + trainSpeed + 500) == testRailTopRight[stationCount]) {
 				subStationCount = stationCount;
@@ -566,7 +638,7 @@ UINT TestDrawObject(LPVOID param)
 				Sleep(1000);
 				stationCount++;
 				if (stationCount == 5) {
-					trainSpeed = 400;
+					trainSpeed = trainX - 30;
 					flag = 1;
 				}
 			}
@@ -622,6 +694,7 @@ UINT TestDrawObject(LPVOID param)
 					trainY = 50;
 				}
 			}
+			*/
 		}
 	}
 
@@ -656,7 +729,13 @@ UINT ThreadMoveTrain(LPVOID param)
 			DrawObject(pMain, pArg->type);
 		}
 		break;
-		
+	case 4:
+		dc.SelectObject(&brush);
+		while (0 != TestDrawObject(pMain))
+		{
+			TestDrawObject(pMain);
+		}
+		break;
 	default:
 		OutputDebugStringW(_T("\r\nCTrain >> ThreadMoveTrain >> Out of ThreadArg.type Range\r\n"));
 		break;
