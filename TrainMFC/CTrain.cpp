@@ -205,7 +205,8 @@ UINT DrawObject(LPVOID param, int type)
 	int arraySize = 0;
 
 	CRect tmpRect;			//곂치는 영역 저장용
-	
+	BOOL moveEnable = TRUE;
+	BOOL changeDirection[2] = { FALSE, FALSE };
 	
 	int TrailTopLeft[RAIL_NUM] = { 0 };
 	int TrailTopRight[RAIL_NUM] = { 0 };
@@ -250,25 +251,25 @@ UINT DrawObject(LPVOID param, int type)
 			switch (flag)	//열차 이동
 			{
 			case 1:	//오른
-				trainSpeed += 10;
+				moveEnable ? trainSpeed += 10 : NULL;
 				rect = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
 				InvalidateRect(pArg->hwnd, rect, TRUE);
 				trainX = trainSpeed + trainWidth;
 				break;
 			case 2:	//아래
-				trainSpeed += 10;
+				moveEnable ? trainSpeed += 10 : NULL;
 				rect = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
 				InvalidateRect(pArg->hwnd, rect, TRUE);
 				trainY = trainSpeed + trainHeight;
 				break;
 			case 3:	//왼
-				trainSpeed -= 10;
+				moveEnable ? trainSpeed -= 10 : NULL;
 				rect = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
 				InvalidateRect(pArg->hwnd, rect, TRUE);
 				trainX = trainSpeed + trainWidth;
 				break;
 			case 4:	//위
-				trainSpeed -= 10;
+				moveEnable ? trainSpeed -= 10 : NULL;
 				rect = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + 30 + posY);
 				InvalidateRect(pArg->hwnd, rect, TRUE);
 				trainY = trainSpeed + trainHeight;
@@ -317,7 +318,72 @@ UINT DrawObject(LPVOID param, int type)
 //				insCheck[subStationCount] = FALSE;
 
 			}
+
+			// 위, 아래 이동
+			if (stationRect.left == subStationRect.left && stationRect.top != subStationRect.top && stationCount >= 1)
+			{
+				changeDirection[1] = TRUE;
+
+				if (changeDirection[0])
+				{
+					trainSpeed = trainY - 30;
+					changeDirection[0] = FALSE;
+				}
+
+				flag = stationRect.top != subStationRect.top && stationRect.top > subStationRect.top ? 2 : 4;	// T : 하, F : 상
+				moveEnable = TRUE;
+
+				if ((30 + trainSpeed) == (stationRect.bottom - 10))
+				{
+					subStationCount = stationCount;
+					moveEnable = FALSE;
+					Sleep(1000);
+					stationCount++;
+				}
+			}
+
+			// 좌, 우 이동
+			else if (stationRect.left != subStationRect.left && stationRect.top == subStationRect.top && stationCount >= 1)
+			{
+				changeDirection[0] = TRUE;
+
+				if (changeDirection[1])
+				{
+					trainSpeed = trainX - 30;
+					changeDirection[1] = FALSE;
+				}
+
+				flag = stationRect.left != subStationRect.left && stationRect.left < subStationRect.left ? 3 : 1;	// T : 좌, F : 우
+				moveEnable = TRUE;
+
+				if ((50 + trainSpeed + posX) == stationRect.right)
+				{
+					subStationCount = stationCount;
+					moveEnable = FALSE;
+					Sleep(1000);
+					stationCount++;
+				}
+			}
+
+			// 생성 후 이동
+			else if (stationCount == 0)
+			{
+				if ((1 == flag || 3 == flag) && (50 + trainSpeed + posX) == stationRect.right)
+				{
+					subStationCount = stationCount;
+					Sleep(1000);
+					stationCount++;
+				}
+				else if ((2 == flag || 4 == flag) && (30 + trainSpeed) == (stationRect.bottom - 10))
+				{
+					subStationCount = stationCount;
+					Sleep(1000);
+					stationCount++;
+				}
+
+			}
 			
+			/*
 			switch (type)
 			{
 			case 2:
@@ -444,6 +510,7 @@ UINT DrawObject(LPVOID param, int type)
 				return 2;
 				break;
 			}
+			*/
 		}
 	}
 
@@ -466,6 +533,7 @@ UINT TestDrawObject(LPVOID param)
 	CRect tmpRect;
 	CRect testtmpRect;
 	BOOL testRectResult;
+	BOOL TestMove = TRUE;
 
 	BOOL changeDirection[2] = { FALSE, FALSE };
 
@@ -478,10 +546,10 @@ UINT TestDrawObject(LPVOID param)
 	while (1) {
 		if (trainFlag == TRUE) {
 			Sleep(10);
-			if (stationCount <= 7) {
+			if (stationCount <= 7 && TestMove) {
 				trainSpeed += 10;
 			}
-			else {
+			else if(TestMove) {
 				trainSpeed -= 10;
 			}
 			testRectResult = testtmpRect.IntersectRect(&rect, &CRect(testRailTopLeft[stationCount], testRailBottomLeft[stationCount], testRailTopRight[stationCount], testRailBottomRight[stationCount]));
@@ -530,7 +598,7 @@ UINT TestDrawObject(LPVOID param)
 			MainRectTest = rect;
 
 			CString tmp;
-			tmp.Format(_T("%d %d %d %d\n"), rect.left, rect.top, subStationCount, stationCount);
+			tmp.Format(_T("%d %d %d %d %d\n"), rect.left, rect.top, subStationCount, stationCount, flag);
 			OutputDebugStringW(tmp);
 
 			if (IntersectRect(tmpRect, MainRectTest, CRect(testRailTopLeft[stationCount], testRailBottomLeft[stationCount], testRailTopRight[stationCount], testRailBottomRight[stationCount])) && stationCount >= 0)
@@ -567,19 +635,16 @@ UINT TestDrawObject(LPVOID param)
 				}
 
 				flag = testRailBottomLeft[stationCount] != testRailBottomLeft[subStationCount] && testRailBottomLeft[stationCount] > testRailBottomLeft[subStationCount] ? 2 : 4;	// T : 하, F : 상
+				TestMove = TRUE;
 				
 				if ((30 + trainSpeed) == testRailBottomRight[stationCount] - 10)
 				{
 					subStationCount = stationCount;
+					TestMove = FALSE;
 					Sleep(1000);
 					stationCount++;
 				}
 			}
-
-			//int testRailTopLeft[RAIL_NUM] = { 520, 620, 720, 820, 820, 920, 920, 920, 820, 720, 720, 620, 520 };
-			//int testRailTopRight[RAIL_NUM] = { 620, 720, 820, 920, 920, 1020, 1020, 1020, 920, 820, 820, 720, 620 };
-			//int testRailBottomLeft[RAIL_NUM] = { 10,10,10,10, 60, 60, 110, 160, 160, 160, 110, 110, 110 };
-			//int testRailBottomRight[RAIL_NUM] = { 60,60,60,60, 110, 110, 160, 210, 210, 210, 160, 160, 160 };
 
 			// 좌, 우 이동
 			else if (testRailTopLeft[stationCount] != testRailTopLeft[subStationCount] && testRailBottomLeft[stationCount] == testRailBottomLeft[subStationCount] && stationCount >= 1)
@@ -593,10 +658,12 @@ UINT TestDrawObject(LPVOID param)
 				}
 
 				flag = testRailTopLeft[stationCount] != testRailTopLeft[subStationCount] && testRailTopLeft[stationCount] < testRailTopLeft[subStationCount] ? 3 : 1;	// T : 좌, F : 우
+				TestMove = TRUE;
 
 				if ((50 + trainSpeed + 500) == testRailTopRight[stationCount])
 				{
 					subStationCount = stationCount;
+					TestMove = FALSE;
 					Sleep(1000);
 					stationCount++;
 				}
