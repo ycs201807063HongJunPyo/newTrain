@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "afxdialogex.h"
 
-#define RAIL_NUM 13	// 레일 개수
+#define RAIL_NUM 17	// 레일 개수
 
 struct ThreadArg
 {
