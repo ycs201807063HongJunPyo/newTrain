@@ -87,7 +87,7 @@ void CTrain::OnBnClickedCreate()
 	
 	arg1.hwnd = this->m_hWnd;
 	arg1.type = numLine;
-	if (trainCount <= 2) {
+	if (trainCount <= (THREAD_NUM - 1)) {
 		arg1.id = trainCount + 10000;
 		m_thread_move[trainCount] = AfxBeginThread(ThreadMoveTrain, &arg1, THREAD_PRIORITY_NORMAL, 0, 0);
 		//GetDlgItem(IDCREATE)->EnableWindow(FALSE);
@@ -223,8 +223,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 	rect = CRect(trainSpeed + posX, trainY - trainHeight, trainSpeed + trainWidth, trainY);	//열차 초기 위치 설정
 	dc.Attach(hdc);
 
-	CString tmpStr;
-
 	while (TRUE) {
 		Sleep(10);	//이동 딜레이
 
@@ -233,32 +231,24 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		case 1:	//오른
 			moveEnable ? trainSpeed += 10 : Sleep(10);
 			rect = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
-			tmpStr.Format(_T("%d %d\n"), rect.left, rect.top);
-			OutputDebugStringW(tmpStr);
 			InvalidateRect(pArg->hwnd, rect, TRUE);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case 2:	//아래
 			moveEnable ? trainSpeed += 10 : Sleep(10);
 			rect = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
-			tmpStr.Format(_T("%d %d\n"), rect.left, rect.top);
-			OutputDebugStringW(tmpStr);
 			InvalidateRect(pArg->hwnd, rect, TRUE);
 			trainY = trainSpeed + trainHeight;
 			break;
 		case 3:	//왼
 			moveEnable ? trainSpeed -= 10 : Sleep(10);
 			rect = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
-			tmpStr.Format(_T("%d %d\n"), rect.left, rect.top);
-			OutputDebugStringW(tmpStr);
 			InvalidateRect(pArg->hwnd, rect, TRUE);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case 4:	//위
 			moveEnable ? trainSpeed -= 10 : Sleep(10);
 			rect = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
-			tmpStr.Format(_T("%d %d\n"), rect.left, rect.top);
-			OutputDebugStringW(tmpStr);
 			InvalidateRect(pArg->hwnd, rect, TRUE);
 			trainY = trainSpeed + trainHeight;
 			break;
@@ -301,8 +291,12 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 
 		}
 
-		// 상, 하 이동
-		if (stationRect.left == subStationRect.left && stationRect.top != subStationRect.top && stationCount >= 1)
+		if (stationCount == arraySize)	// 이동 종료
+		{
+			InvalidateRect(pArg->hwnd, subStationRect, TRUE);
+			return id;
+		}
+		else if (stationRect.left == subStationRect.left && stationRect.top != subStationRect.top && stationCount >= 1)	// 상, 하 이동
 		{
 			changeDirection[1] = TRUE;
 
@@ -323,9 +317,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 				stationCount++;
 			}
 		}
-
-		// 좌, 우 이동
-		else if (stationRect.left != subStationRect.left && stationRect.top == subStationRect.top && stationCount >= 1)
+		else if (stationRect.left != subStationRect.left && stationRect.top == subStationRect.top && stationCount >= 1)	// 좌, 우 이동
 		{
 			changeDirection[0] = TRUE;
 
@@ -346,9 +338,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 				stationCount++;
 			}
 		}
-
-		// 생성 후 이동
-		else if (stationCount == 0)
+		else if (stationCount == 0)	// 생성 후 이동
 		{
 			moveEnable = insCheck[lineSelect][stationCount + 1] || startInsCheck[lineSelect] ? FALSE : TRUE;
 			if ((1 == flag || 3 == flag) && (trainWidth + trainSpeed + posX + 20) == stationRect.right && moveEnable)	// 좌, 우
@@ -367,6 +357,10 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			}
 
 		}
+		else // 사용하지 않는 개수 증가
+		{
+			stationCount++;
+		}
 
 		stationCount == 2 ? startInsCheck[lineSelect] = FALSE : NULL;	// 초기 시작 충돌 방지
 
@@ -383,9 +377,9 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 	HDC hdc = ::GetDC(pArg->hwnd);
 	CRect rect;
 	int trainSpeed = 0;  //열차 속도
-	int trainX;  //x기억
+	int trainX = 50;  //x기억
 	int trainY = 50;  //y기억
-	int flag = 1;
+	int flag = 2;
 
 	CRect MainRectTest;
 	CRect tmpRect;
@@ -631,34 +625,32 @@ UINT ThreadMoveTrain(LPVOID param)
 	CDC dc;
 	HDC hdc = ::GetDC(pArg->hwnd);
 	CBrush brush = RGB(255, 255, 255);
-	int errorCode = 0;
+	int errorCode = 10000;
+	DWORD dwResult;
 
 	dc.Attach(hdc);
 	dc.SelectObject(&brush);
-
 	switch (pArg->type)
 	{
 	case 2:
-		dc.SelectObject(&brush);
-		while (0 != DrawObject(pMain, pArg->type, pArg->id));
+		errorCode = DrawObject(pMain, pArg->type, pArg->id);
 		break;
 	case 3:
-		dc.SelectObject(&brush);
-		while (0 != DrawObject(pMain, pArg->type, pArg->id));
+		errorCode = DrawObject(pMain, pArg->type, pArg->id);
 		break;
 	case 4:
-		dc.SelectObject(&brush);
-		while (0 != DrawObject(pMain, pArg->type, pArg->id));
+		errorCode = DrawObject(pMain, pArg->type, pArg->id);
 		break;
 	case 5:
 		dc.SelectObject(&brush);
-		while (0 != TestDrawObject(pMain));
+		TestDrawObject(pMain);
 		break;
 	default:
 		OutputDebugStringW(_T("\r\nCTrain >> ThreadMoveTrain >> Out of ThreadArg.type Range\r\n"));
 		break;
 	}
 
+	errorCode >= 10000 ? ::GetExitCodeThread(pMain->m_thread_move[(errorCode - 10000)], &dwResult) : NULL;
 	dc.Detach();
 	::ReleaseDC(pArg->hwnd, hdc);
 
