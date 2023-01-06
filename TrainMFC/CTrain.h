@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "afxdialogex.h"
 
-#define THREAD_NUM 5	// 스레드 개수
+#define THREAD_NUM 6	// 스레드 개수
 #define RAIL_NUM 17		// 레일 개수
 #define LINE_NUM 10		// 선로 개수
 
@@ -47,8 +47,6 @@ public:
 	CWinThread* m_thread_move[THREAD_NUM];  //열차 쓰레드
 	ThreadArg arg1;
 	HwndArg hWndArg;
-
-	int trainCount; //열차갯수
 
 	afx_msg void OnPaint();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);

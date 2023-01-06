@@ -28,6 +28,11 @@ int TtestRailTopRight[RAIL_NUM] = { 110, 110, 210, 210, 210, 110, 110, 110, 210,
 int TtestRailBottomLeft[RAIL_NUM] = { 170, 220, 220, 270, 320, 320, 370, 420, 420, 420, 370, 320, 270, 220, 170, 170 };
 int TtestRailBottomRight[RAIL_NUM] = { 220, 270, 270, 320, 370, 370, 420, 470, 470, 470, 420, 370, 320, 270, 220, 220 };
 
+int TTtestRailTopLeft[RAIL_NUM] = { 310, 410, 610, 910 };
+int TTtestRailTopRight[RAIL_NUM] = { 410, 610, 910, 1410 };
+int TTtestRailBottomLeft[RAIL_NUM] = { 220, 220, 220, 220 };
+int TTtestRailBottomRight[RAIL_NUM] = { 270, 270, 270, 270 };
+
 //역에 열차가 있는지 확인
 BOOL insCheck[LINE_NUM][RAIL_NUM] = { FALSE };
 BOOL testInsCheck[RAIL_NUM] = { FALSE };
@@ -38,6 +43,7 @@ CRect testRect;
 
 UINT numLine;	//선로 번호
 CString lineEditText = _T("");
+int trainCount; //열차갯수
 
 
 CTrain::CTrain(CWnd* pParent /*=nullptr*/)
@@ -133,6 +139,7 @@ void CTrain::OnPaint()
 		dc.Rectangle(railTopLeft[i], railBottomLeft[i], railTopRight[i], railBottomRight[i]);
 		dc.Rectangle(testRailTopLeft[i], testRailBottomLeft[i], testRailTopRight[i], testRailBottomRight[i]);
 		dc.Rectangle(TtestRailTopLeft[i], TtestRailBottomLeft[i], TtestRailTopRight[i], TtestRailBottomRight[i]);
+		dc.Rectangle(TTtestRailTopLeft[i], TTtestRailBottomLeft[i], TTtestRailTopRight[i], TTtestRailBottomRight[i]);
 	}
 	dc.SelectObject(oldPen);
 
@@ -214,6 +221,19 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			TrailBottomRight[i] = TtestRailBottomRight[i];
 		}
 		posY = 160;
+		break;
+	case 5:
+		lineSelect = type - 1;
+		arraySize = (sizeof(testRailBottomLeft) / sizeof(*testRailBottomLeft));
+		for (int i = 0; i < arraySize; i++)
+		{
+			TrailTopLeft[i] = TTtestRailTopLeft[i];
+			TrailTopRight[i] = TTtestRailTopRight[i];
+			TrailBottomLeft[i] = TTtestRailBottomLeft[i];
+			TrailBottomRight[i] = TTtestRailBottomRight[i];
+		}
+		posX = 300;
+		posY = 210;
 		break;
 	default:
 		return 2;
@@ -309,7 +329,8 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			flag = stationRect.top != subStationRect.top && stationRect.top > subStationRect.top ? 2 : 4;	// T(2) : 하, F(4) : 상
 			moveEnable = insCheck[lineSelect][stationCount + 1] ? FALSE : TRUE;
 
-			if ((trainHeight + trainSpeed + posY) == (stationRect.bottom - 10))
+			if ((trainHeight + trainSpeed + posY) == (stationRect.bottom - 10))	// 일정거리 이동 후 정지
+//			if ((trainSpeed + posY) == (stationRect.bottom - ((stationRect.bottom - stationRect.top) / 2)))	// 일정거리 이동 후 정지
 			{
 				subStationCount = stationCount;
 				moveEnable = FALSE;
@@ -330,7 +351,8 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			flag = stationRect.left != subStationRect.left && stationRect.left < subStationRect.left ? 3 : 1;	// T(3) : 좌, F(1) : 우
 			moveEnable = insCheck[lineSelect][stationCount + 1] ? FALSE : TRUE;
 
-			if ((trainWidth + trainSpeed + posX + 20) == stationRect.right)
+			if ((trainWidth + trainSpeed + posX + 20) == stationRect.right)	// 일정거리 이동 후 정지
+//			if ((trainSpeed + posX) == (stationRect.right - ((stationRect.right - stationRect.left) / 2)))	// 일정거리 이동 후 정지
 			{
 				subStationCount = stationCount;
 				moveEnable = FALSE;
@@ -642,15 +664,25 @@ UINT ThreadMoveTrain(LPVOID param)
 		errorCode = DrawObject(pMain, pArg->type, pArg->id);
 		break;
 	case 5:
+		errorCode = DrawObject(pMain, pArg->type, pArg->id);
+		break;
+	case 6:
+		errorCode = 100;
 		dc.SelectObject(&brush);
 		TestDrawObject(pMain);
 		break;
 	default:
+		errorCode = 2;
 		OutputDebugStringW(_T("\r\nCTrain >> ThreadMoveTrain >> Out of ThreadArg.type Range\r\n"));
 		break;
 	}
 
-	errorCode >= 10000 ? ::GetExitCodeThread(pMain->m_thread_move[(errorCode - 10000)], &dwResult) : NULL;
+	if (errorCode >= 10000)
+	{
+		::GetExitCodeThread(pMain->m_thread_move[(errorCode - 10000)], &dwResult);
+		trainCount--;
+	}
+		
 	dc.Detach();
 	::ReleaseDC(pArg->hwnd, hdc);
 
