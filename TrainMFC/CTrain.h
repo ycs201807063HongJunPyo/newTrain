@@ -47,13 +47,17 @@ public:
 	CWinThread* m_thread_move[5];  //열차 쓰레드
 	ThreadArg arg1;
 	HwndArg hWndArg;
+	BOOL trainTimerWait; //열차 배차간격용 타이머 불인
 
 	int trainCount; //열차갯수
 
 	afx_msg void OnPaint();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+	
+	
 	//afx_msg UINT DrawObject(LPVOID param);
-	//afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
 	CStatic testText1;
 	CStatic testText2;
 
