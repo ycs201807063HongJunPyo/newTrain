@@ -1,12 +1,15 @@
 ﻿#pragma once
 #include "afxdialogex.h"
 
-#define RAIL_NUM 17	// 레일 개수
+#define THREAD_NUM 3	// 스레드 개수
+#define RAIL_NUM 17		// 레일 개수
+#define LINE_NUM 10		// 선로 개수
 
 struct ThreadArg
 {
 	HWND hwnd;
 	int type;
+	UINT id;
 };
 
 struct HwndArg
@@ -38,15 +41,10 @@ public:
 	afx_msg void OnBnClickedCreate();
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedStop();
-	afx_msg	void TimerFunction(int flag);
-	afx_msg	void TrainMove(int left, int top, int right, int bottom);
-	CRect trainSize;
-	BOOL startFlag;
-	
 
 
 	BITMAP bmpInfo;  //비트맵
-	CWinThread* m_thread_move[3];  //열차 쓰레드
+	CWinThread* m_thread_move[THREAD_NUM];  //열차 쓰레드
 	ThreadArg arg1;
 	HwndArg hWndArg;
 
@@ -54,9 +52,8 @@ public:
 
 	afx_msg void OnPaint();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
-	//afx_msg UINT DrawObject(LPVOID param);
-	//afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
 	CStatic testText1;
 	CStatic testText2;
 
+	afx_msg void OnEnChangeEditLine();
 };
