@@ -2,6 +2,7 @@
 #include "afxdialogex.h"
 
 #define RAIL_NUM 13	// 레일 개수
+#define SMALL_RAIL_NUM 8	// 레일 개수
 
 struct ThreadArg
 {
@@ -49,7 +50,7 @@ public:
 	HwndArg hWndArg;
 	BOOL trainTimerWait; //열차 배차간격용 타이머 불인
 
-	int trainCount; //열차갯수
+	
 
 	afx_msg void OnPaint();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
