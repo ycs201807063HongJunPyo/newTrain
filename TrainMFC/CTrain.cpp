@@ -94,7 +94,7 @@ void CTrain::OnBnClickedCreate()
 	GetDlgItemText(IDC_EDIT_LINE, tmpStr);
 	numLine = _wtoi(tmpStr);
 	GetDlgItemText(IDC_EDITCirCount, tmpStr);
-	numCirCount = _wtoi(tmpStr);
+	numCirCount = "" == tmpStr || "0" == tmpStr ? 1 : _wtoi(tmpStr);
 	checkCirEnable = ((CButton*)GetDlgItem(IDC_CheckCir))->GetCheck();
 	
 	arg1.hwnd = this->m_hWnd;
@@ -186,7 +186,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 	CRect tmpRect;			//곂치는 영역 저장
 	BOOL moveEnable = TRUE;	//이동 가능 여부
 	BOOL changeDirection[3] = { TRUE, TRUE, FALSE };	//1,2 : 방향 전환 여부(좌,우 <-> 상,하), 3 : 정방향, 역방향 여부(좌표 변경용)
-	BOOL isReverse = FALSE;		//정방향, 역방향 여부(방향 전환용)
+	BOOL isReverse = FALSE;	//정방향, 역방향 여부(방향 전환용)
 	
 	// 선로 좌표 저장
 	int TrailLeft[RAIL_NUM] = { 0 };
@@ -203,7 +203,11 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 	CString testStr;		///Test String
 	int count = 0;			//실제 선로 개수
 	int cirCount = 0;		//순환 횟수(증가용)
-	int cirCountText = 1;	// 순환 횟수(저장용)
+	int cirCountText = 1;	//순환 횟수(저장용)
+	BOOL cirEnable = FALSE;	//순환 가능 여부
+
+	cirCountText = (numCirCount * 2);
+	cirEnable = checkCirEnable;
 
 	switch (type)	//선로 선택
 	{
@@ -321,7 +325,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 
 		if (cirCount == cirCountText)	// 순환 종료 및 반환
 		{
-			InvalidateRect(pArg->hwnd, stationRect, TRUE);
+			InvalidateRect(pArg->hwnd, subStationRect, TRUE);
 			return id;
 		}
 
@@ -346,8 +350,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 				TrailBottom[i] = tmpTrailBottom[i];
 			}
 			cirCount++;
-			testStr.Format(_T("\n%d\n"), cirCount);
-			OutputDebugStringW(testStr);
 			changeDirection[2] = FALSE;
 		}
 
@@ -394,10 +396,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		dc.SelectObject(oldBrush);
 		dc.Rectangle(rect);	//열차 그리기
 
-		CString tmp;
-		tmp.Format(_T("%d %d || %d %d || %d\n"), rect.left, rect.top, stationRect.right, stationRect.bottom, (trainHeight + trainSpeed + posY));
-		OutputDebugStringW(tmp);
-
 		if (IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0)
 		{
 			//색칠 + 무효화
@@ -405,7 +403,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			oldBrush = dc.SelectObject(&brush);
 			dc.Rectangle(stationRect);
 			//이전역 부분과 충돌이 있을경우에만 무효화 해주기
-//			if (IntersectRect(tmpRect, rect, subStationRect) && !insCheck[lineSelect][subStationCount] && stationCount >= 1) {
 			if (!insCheck[lineSelect][subStationCount] && stationCount >= 1) {
 				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
 			}
@@ -423,13 +420,21 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 
 		if (stationCount == RAIL_NUM)	// 이동 종료
 		{
-			isReverse = isReverse ? FALSE : TRUE;
-			stationCount = 1;
-			subStationCount = 0;
-			trainSpeed = trainX - trainWidth;
-			//flag = isReverse ? 3 : 1;
-			changeDirection[2] = TRUE;
-			cirCount++;
+			if (cirEnable)
+			{
+				isReverse = isReverse ? FALSE : TRUE;
+				stationCount = 1;
+				subStationCount = 0;
+				trainSpeed = trainX - trainWidth;
+				changeDirection[2] = TRUE;
+				cirCount++;
+			}
+			else
+			{
+				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
+				return id;
+			}
+			
 		}
 		else if (stationRect.left == subStationRect.left && stationRect.top != subStationRect.top && stationCount >= 1)	// 상, 하 이동
 		{
@@ -445,7 +450,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			moveEnable = insCheck[lineSelect][stationCount + 1] ? FALSE : TRUE;
 
 			if ((trainHeight + trainSpeed + posY) == (stationRect.bottom - 10))	// 일정거리 이동 후 정지
-//			if ((trainSpeed + posY) == (stationRect.bottom - ((stationRect.bottom - stationRect.top) / 2)))	// 일정거리 이동 후 정지
 			{
 				subStationCount = stationCount;
 				moveEnable = FALSE;
@@ -467,7 +471,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			moveEnable = insCheck[lineSelect][stationCount + 1] ? FALSE : TRUE;
 
 			if ((trainWidth + trainSpeed + posX + 20) == stationRect.right)	// 일정거리 이동 후 정지
-//			if ((trainSpeed + posX) == (stationRect.right - ((stationRect.right - stationRect.left) / 2)))	// 일정거리 이동 후 정지
 			{
 				subStationCount = stationCount;
 				moveEnable = FALSE;
