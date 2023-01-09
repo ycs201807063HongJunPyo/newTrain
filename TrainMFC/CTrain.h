@@ -2,14 +2,14 @@
 #include "afxdialogex.h"
 
 #define THREAD_NUM 6	// 스레드 개수
-#define RAIL_NUM 17		// 레일 개수
+#define RAIL_NUM 20		// 레일 개수
 #define LINE_NUM 10		// 선로 개수
 
 struct ThreadArg
 {
 	HWND hwnd;
-	int type;
-	UINT id;
+	int type;	// 선로 번호
+	UINT id;	// 스레드 번호
 };
 
 struct HwndArg
