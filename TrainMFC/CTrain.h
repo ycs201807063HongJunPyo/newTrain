@@ -2,7 +2,8 @@
 #include "afxdialogex.h"
 
 #define RAIL_NUM 13	// 레일 개수
-#define SMALL_RAIL_NUM 8	// 레일 개수
+#define SMALL_RAIL_NUM 9	// 레일 개수
+#define SUB_RAIL_NUM 3	// 레일 개수
 
 struct ThreadArg
 {
