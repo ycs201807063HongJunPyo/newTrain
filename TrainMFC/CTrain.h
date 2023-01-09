@@ -1,9 +1,11 @@
 ﻿#pragma once
 #include "afxdialogex.h"
 
+#define SUM_RAIL_NUM 5	// 선로 개수
+
 #define RAIL_NUM 13	// 레일 개수
 #define SMALL_RAIL_NUM 9	// 레일 개수
-#define SUB_RAIL_NUM 3	// 레일 개수
+#define SUB_RAIL_NUM 4	// 레일 개수
 
 struct ThreadArg
 {
@@ -54,7 +56,6 @@ public:
 	
 
 	afx_msg void OnPaint();
-	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	
 	
