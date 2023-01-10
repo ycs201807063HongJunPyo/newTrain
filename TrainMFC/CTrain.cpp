@@ -23,15 +23,17 @@ int testRailTop[RAIL_NUM] = { 10,10,10,10, 60, 60, 110, 160, 160, 160, 110, 110,
 int testRailRight[RAIL_NUM] = { 620, 720, 820, 920, 920, 1020, 1020, 1020, 920, 820, 820, 720, 620 };
 int testRailBottom[RAIL_NUM] = { 60,60,60,60, 110, 110, 160, 210, 210, 210, 160, 160, 160 };
 
-int TtestRailLeft[RAIL_NUM] = { 10, 10, 110, 110, 110, 10, 10, 10, 110, 210, 210, 210, 210, 210, 210, 110 };
-int TtestRailTop[RAIL_NUM] = { 170, 220, 220, 270, 320, 320, 370, 420, 420, 420, 370, 320, 270, 220, 170, 170 };
-int TtestRailRight[RAIL_NUM] = { 110, 110, 210, 210, 210, 110, 110, 110, 210, 310, 310, 310, 310, 310, 310, 210 };
-int TtestRailBottom[RAIL_NUM] = { 220, 270, 270, 320, 370, 370, 420, 470, 470, 470, 420, 370, 320, 270, 220, 220 };
+int TtestRailLeft[RAIL_NUM] = { 10, 10, 110, 110, 110, 10, 10, 10, 110, 220, 220, 220, 220, 220, 220, 120 };
+int TtestRailTop[RAIL_NUM] = { 170, 220, 220, 270, 320, 320, 370, 420, 420, 420, 380, 320, 270, 210, 160, 160 };
+int TtestRailRight[RAIL_NUM] = { 110, 110, 210, 210, 210, 110, 110, 110, 220, 310, 310, 310, 310, 310, 310, 220 };
+int TtestRailBottom[RAIL_NUM] = { 220, 270, 270, 320, 370, 370, 420, 470, 470, 470, 420, 380, 320, 270, 210, 210 };
 
-int TTtestRailLeft[RAIL_NUM] = { 310, 410, 610, 910 };
-int TTtestRailTop[RAIL_NUM] = { 220, 220, 220, 220 };
-int TTtestRailRight[RAIL_NUM] = { 410, 610, 910, 1410 };
+int TTtestRailLeft[RAIL_NUM] = { 310, 420, 620, 920 };
+int TTtestRailTop[RAIL_NUM] = { 210, 210, 210, 210 };
+int TTtestRailRight[RAIL_NUM] = { 420, 620, 920, 1420 };
 int TTtestRailBottom[RAIL_NUM] = { 270, 270, 270, 270 };
+
+int flRailLeft[RAIL_NUM] = {10, 110, 190, 280, 400, 520, 700, 820, 920, 1080, 1400};
 
 //역에 열차가 있는지 확인
 BOOL insCheck[LINE_NUM][RAIL_NUM] = { FALSE };
@@ -139,14 +141,20 @@ void CTrain::OnPaint()
 	//역 테두리 설정
 	CPen myPen(PS_SOLID, 1, RGB(0, 0, 0));
 	CPen* oldPen = dc.SelectObject(&myPen);
-	int arraySize = (sizeof(railTop) / sizeof(*railTop));
-	for (int i = 0; i < arraySize; i++) {
-		//역 만들기
-		dc.Rectangle(railLeft[i], railTop[i], railRight[i], railBottom[i]);
-		dc.Rectangle(testRailLeft[i], testRailTop[i], testRailRight[i], testRailBottom[i]);
+	int arraySize = (sizeof(flRailLeft) / sizeof(*flRailLeft)) / 2;
+
+	//역 만들기
+	for (int i = 0; i < arraySize; i++)
+	{
+		dc.Rectangle(CRect(flRailLeft[i], 10, flRailLeft[i + 1], 30));
+		dc.Rectangle(CRect(flRailLeft[i], 40, flRailLeft[i + 1], 60));
+	}
+	for (int i = 0; i < RAIL_NUM; i++) {
+		
 		dc.Rectangle(TtestRailLeft[i], TtestRailTop[i], TtestRailRight[i], TtestRailBottom[i]);
 		dc.Rectangle(TTtestRailLeft[i], TTtestRailTop[i], TTtestRailRight[i], TTtestRailBottom[i]);
 	}
+	
 	dc.SelectObject(oldPen);
 
 	MemDC.SelectObject(pOldBmp);
@@ -171,8 +179,8 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 	int trainSpeed = 0;		//열차 속도
 	int trainX = 50;		//x기억
 	int trainY = 50;		//y기억
-	int trainWidth = 40;	//열차 가로 길이
-	int trainHeight = 30;	//열차 세로 길이
+	int trainWidth = 30;	//열차 가로 길이
+	int trainHeight = 10;	//열차 세로 길이
 	int flag = 1;			//열차 이동 방향		1 : Right / 2 : Down / 3 : Left / 4 : Up
 	int posX = 0;			//초기 x위치
 	int posY = 0;			//초기 y위치
@@ -205,6 +213,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 	int cirCount = 0;		//순환 횟수(증가용)
 	int cirCountText = 1;	//순환 횟수(저장용)
 	BOOL cirEnable = FALSE;	//순환 가능 여부
+	int arraySize = 0;
 
 	cirCountText = (numCirCount * 2);
 	cirEnable = checkCirEnable;
@@ -213,38 +222,16 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 	{
 	case 2:
 		lineSelect = type - 1;
-		for (int i = 0; i < RAIL_NUM; i++)
+		arraySize = (sizeof(flRailLeft) / sizeof(*flRailLeft)) / 2;
+		for (int i = 0; i < arraySize; i++)
 		{
-			TrailLeft[i] = railLeft[i];
-			TrailTop[i] = railTop[i];
-			TrailRight[i] = railRight[i];
-			TrailBottom[i] = railBottom[i];
-
-			if (TrailLeft[i] == 0 && TrailTop[i] == 0 && TrailRight[i] == 0 && TrailBottom[i] == 0)
-			{
-				count = i - 1;
-				break;
-			}
+			TrailLeft[i] = flRailLeft[i];
+			TrailTop[i] = 10;
+			TrailRight[i] = flRailLeft[i + 1];
+			TrailBottom[i] = 30;
 		}
 		break;
 	case 3:
-		lineSelect = type - 1;
-		for (int i = 0; i < RAIL_NUM; i++)
-		{
-			TrailLeft[i] = testRailLeft[i];
-			TrailTop[i] = testRailTop[i];
-			TrailRight[i] = testRailRight[i];
-			TrailBottom[i] = testRailBottom[i];
-
-			if (TrailLeft[i] == 0 && TrailTop[i] == 0 && TrailRight[i] == 0 && TrailBottom[i] == 0)
-			{
-				count = i - 1;
-				break;
-			}
-		}
-		posX = 500;
-		break;
-	case 4:
 		lineSelect = type - 1;
 		for (int i = 0; i < RAIL_NUM; i++)
 		{
@@ -261,7 +248,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		}
 		posY = 160;
 		break;
-	case 5:
+	case 4:
 		lineSelect = type - 1;
 		for (int i = 0; i < RAIL_NUM; i++)
 		{
@@ -279,7 +266,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		posX = 300;
 		posY = 210;
 		break;
-	case 6:
+	case 5:
 		lineSelect = type - 1;
 		for (int i = 0; i < RAIL_NUM; i++)
 		{
@@ -329,7 +316,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			return id;
 		}
 
-		if (isReverse && changeDirection[2])
+		if (isReverse && changeDirection[2])	// 방향 전환 : 역방향
 		{
 			for (int i = 0; i <= count; i++)
 			{
@@ -340,7 +327,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			}
 			changeDirection[2] = FALSE;
 		}
-		else if (!isReverse && changeDirection[2])
+		else if (!isReverse && changeDirection[2])	// 방향 전환 : 정방향
 		{
 			for (int i = 0; i <= count; i++)
 			{
@@ -517,146 +504,61 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 	CRect rect;				//열차
 	int trainSpeed = 0;		//열차 속도
 	int trainX = 50;		//x기억
-	int trainY = 50;		//y기억
-	int trainWidth = 40;	//열차 가로 길이
-	int trainHeight = 30;	//열차 세로 길이
+	int trainY = 30;		//y기억
+	int trainWidth = 50;	//열차 가로 길이
+	int trainHeight = 15;	//열차 세로 길이
 	int flag = 1;			//열차 이동 방향		1 : Right / 2 : Down / 3 : Left / 4 : Up
 	int posX = 0;			//초기 x위치
 	int posY = 0;			//초기 y위치
 	int stationCount = 0;	//현재 도착역
 	int subStationCount = 0;//정차이후 출발역
-	int lineSelect = 0;		//선로 저장
+	int lineSelect = 1;		//선로 번호저장
+
+	CRect stationRect;		//현재역 영역
+	CRect subStationRect;	//이전역 영역
 
 	CRect tmpRect;			//곂치는 영역 저장
 	BOOL moveEnable = TRUE;	//이동 가능 여부
-	BOOL changeDirection[3] = { TRUE, TRUE, FALSE };	//방향 전환 여부(좌,우 <-> 상,하)
-	BOOL isReverse = FALSE;
+	BOOL changeDirection[3] = { TRUE, TRUE, FALSE };	//1,2 : 방향 전환 여부(좌,우 <-> 상,하), 3 : 정방향, 역방향 여부(좌표 변경용)
+	BOOL isReverse = FALSE;	//정방향, 역방향 여부(방향 전환용)
 
 	// 선로 좌표 저장
 	int TrailLeft[RAIL_NUM] = { 0 };
 	int TrailTop[RAIL_NUM] = { 0 };
 	int TrailRight[RAIL_NUM] = { 0 };
 	int TrailBottom[RAIL_NUM] = { 0 };
+
 	// 임시 선로 좌표 저장
 	int tmpTrailLeft[RAIL_NUM] = { 0 };
 	int tmpTrailTop[RAIL_NUM] = { 0 };
 	int tmpTrailRight[RAIL_NUM] = { 0 };
 	int tmpTrailBottom[RAIL_NUM] = { 0 };
 
+	CString testStr;		///Test String
+	int cirCount = 0;		//순환 횟수(증가용)
+	int cirCountText = 1;	//순환 횟수(저장용)
+	BOOL cirEnable = FALSE;	//순환 가능 여부
 
-	CString testStr;	///Test String
-	int type = 2;
-	int count = 0;
-	int cirCount = 0;
-
-	switch (type)	//선로 선택
+	cirCountText = (numCirCount * 2);
+	cirEnable = checkCirEnable;
+	
+	int arraySize = (sizeof(flRailLeft) / sizeof(*flRailLeft)) / 2;
+	for (int i = 0; i < arraySize; i++)
 	{
-	case 2:
-		lineSelect = type - 1;
-		for (int i = 0; i < RAIL_NUM; i++)
-		{
-			TrailLeft[i] = railLeft[i];
-			TrailTop[i] = railTop[i];
-			TrailRight[i] = railRight[i];
-			TrailBottom[i] = railBottom[i];
-
-			if (TrailLeft[i] == 0 && TrailTop[i] == 0 && TrailRight[i] == 0 && TrailBottom[i] == 0)
-			{
-				count = i - 1;
-				break;
-			}
-		}
-		break;
-	case 3:
-		lineSelect = type - 1;
-		for (int i = 0; i < RAIL_NUM; i++)
-		{
-			TrailLeft[i] = testRailLeft[i];
-			TrailTop[i] = testRailTop[i];
-			TrailRight[i] = testRailRight[i];
-			TrailBottom[i] = testRailBottom[i];
-
-			if (TrailLeft[i] == 0 && TrailTop[i] == 0 && TrailRight[i] == 0 && TrailBottom[i] == 0)
-			{
-				count = i - 1;
-				break;
-			}
-		}
-		posX = 500;
-		break;
-	case 4:
-		lineSelect = type - 1;
-		for (int i = 0; i < RAIL_NUM; i++)
-		{
-			TrailLeft[i] = TtestRailLeft[i];
-			TrailTop[i] = TtestRailTop[i];
-			TrailRight[i] = TtestRailRight[i];
-			TrailBottom[i] = TtestRailBottom[i];
-
-			if (TrailLeft[i] == 0 && TrailTop[i] == 0 && TrailRight[i] == 0 && TrailBottom[i] == 0)
-			{
-				count = i - 1;
-				break;
-			}
-		}
-		posY = 160;
-		break;
-	case 5:
-		lineSelect = type - 1;
-		for (int i = 0; i < RAIL_NUM; i++)
-		{
-			TrailLeft[i] = TTtestRailLeft[i];
-			TrailTop[i] = TTtestRailTop[i];
-			TrailRight[i] = TTtestRailRight[i];
-			TrailBottom[i] = TTtestRailBottom[i];
-
-			if (TrailLeft[i] == 0 && TrailTop[i] == 0 && TrailRight[i] == 0 && TrailBottom[i] == 0)
-			{
-				count = i - 1;
-				break;
-			}
-		}
-		posX = 300;
-		posY = 210;
-		break;
-	case 6:
-		lineSelect = type - 1;
-		for (int i = 0; i < RAIL_NUM; i++)
-		{			
-			TrailLeft[i] = TtestRailLeft[i];
-			TrailTop[i] = TtestRailTop[i];
-			TrailRight[i] = TtestRailRight[i];
-			TrailBottom[i] = TtestRailBottom[i];
-
-			if (i > 13)
-			{
-				TrailLeft[i] = TTtestRailLeft[i - 14];
-				TrailTop[i] = TTtestRailTop[i - 14];
-				TrailRight[i] = TTtestRailRight[i - 14];
-				TrailBottom[i] = TTtestRailBottom[i - 14];
-			}
-
-			if (TrailLeft[i] == 0 && TrailTop[i] == 0 && TrailRight[i] == 0 && TrailBottom[i] == 0)
-			{
-				count = i - 1;
-				break;
-			}
-			
-		}
-		posY = 160;
-		break;
-	default:
-		return 2;
-		break;
+		TrailLeft[i] = flRailLeft[i];
+		TrailTop[i] = 10;
+		TrailRight[i] = flRailLeft[i + 1];
+		TrailBottom[i] = 30;
 	}
 
-	for (int i = 0; i <= count; i++)
+	for (int i = 0; i < arraySize; i++)
 	{
-		tmpTrailLeft[i] = TrailLeft[i];
-		tmpTrailTop[i] = TrailTop[i];
-		tmpTrailRight[i] = TrailRight[i];
-		tmpTrailBottom[i] = TrailBottom[i];
+		tmpTrailLeft[i] = flRailLeft[i];
+		tmpTrailTop[i] = 40;
+		tmpTrailRight[i] = flRailLeft[i + 1];
+		tmpTrailBottom[i] = 60;
 	}
+	arraySize--;
 
 	rect = CRect(trainSpeed + posX, trainY - trainHeight, trainSpeed + trainWidth, trainY);	//열차 초기 위치 설정
 	dc.Attach(hdc);
@@ -664,20 +566,29 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 	while (TRUE) {
 		Sleep(10);	//이동 딜레이
 
-		if (isReverse && changeDirection[2])
+		if (cirCount == cirCountText)	// 순환 종료 및 반환
 		{
-			for (int i = 0; i <= count; i++)
+			testStr.Format(_T("%d %d  ||  %d %d\n"), stationRect.left, stationRect.right, subStationRect.left, subStationRect.right);
+			OutputDebugStringW(testStr);
+			InvalidateRect(pArg->hwnd, subStationRect, TRUE);
+			return 2;
+		}
+
+		if (isReverse && changeDirection[2])	// 방향 전환 : 역방향
+		{
+			for (int i = 0; i <= arraySize; i++)
 			{
-				TrailLeft[i] = tmpTrailLeft[count - i];
-				TrailTop[i] = tmpTrailTop[count - i];
-				TrailRight[i] = tmpTrailRight[count - i];
-				TrailBottom[i] = tmpTrailBottom[count - i];
+				TrailLeft[i] = tmpTrailLeft[arraySize - i];
+				TrailTop[i] = tmpTrailTop[arraySize - i];
+				TrailRight[i] = tmpTrailRight[arraySize - i];
+				TrailBottom[i] = tmpTrailBottom[arraySize - i];
 			}
+			moveEnable = FALSE;
 			changeDirection[2] = FALSE;
 		}
-		else if(!isReverse && changeDirection[2])
+		else if (!isReverse && changeDirection[2])	// 방향 전환 : 정방향
 		{
-			for (int i = 0; i <= count; i++)
+			for (int i = 0; i <= arraySize; i++)
 			{
 				TrailLeft[i] = tmpTrailLeft[i];
 				TrailTop[i] = tmpTrailTop[i];
@@ -685,33 +596,31 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 				TrailBottom[i] = tmpTrailBottom[i];
 			}
 			cirCount++;
-			testStr.Format(_T("\n%d\n"), cirCount);
-			OutputDebugStringW(testStr);
 			changeDirection[2] = FALSE;
 		}
 
 		switch (flag)	//열차 이동
 		{
 		case 1:	//오른
-			moveEnable ? trainSpeed += 10 : Sleep(10);
+			moveEnable ? trainSpeed += 5 : Sleep(10);
 			rect = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
 			InvalidateRect(pArg->hwnd, rect, TRUE);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case 2:	//아래
-			moveEnable ? trainSpeed += 10 : Sleep(10);
+			moveEnable ? trainSpeed += 5 : Sleep(10);
 			rect = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
 			InvalidateRect(pArg->hwnd, rect, TRUE);
 			trainY = trainSpeed + trainHeight;
 			break;
 		case 3:	//왼
-			moveEnable ? trainSpeed -= 10 : Sleep(10);
+			moveEnable ? trainSpeed -= 5 : Sleep(10);
 			rect = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
 			InvalidateRect(pArg->hwnd, rect, TRUE);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case 4:	//위
-			moveEnable ? trainSpeed -= 10 : Sleep(10);
+			moveEnable ? trainSpeed -= 5 : Sleep(10);
 			rect = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
 			InvalidateRect(pArg->hwnd, rect, TRUE);
 			trainY = trainSpeed + trainHeight;
@@ -722,8 +631,8 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 			break;
 		}
 
-		CRect stationRect = CRect(TrailLeft[stationCount], TrailTop[stationCount], TrailRight[stationCount], TrailBottom[stationCount]);					//현재역 영역
-		CRect subStationRect = CRect(TrailLeft[subStationCount], TrailTop[subStationCount], TrailRight[subStationCount], TrailBottom[subStationCount]);		//이전역 영역
+		stationRect = CRect(TrailLeft[stationCount], TrailTop[stationCount], TrailRight[stationCount], TrailBottom[stationCount]);					//현재역 영역
+		subStationRect = CRect(TrailLeft[subStationCount], TrailTop[subStationCount], TrailRight[subStationCount], TrailBottom[subStationCount]);	//이전역 영역
 
 		IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
 
@@ -733,10 +642,6 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 		dc.SelectObject(oldBrush);
 		dc.Rectangle(rect);	//열차 그리기
 
-		CString tmp;
-		tmp.Format(_T("%d %d || %d %d || %d\n"), rect.left, rect.top, subStationRect.right, subStationRect.bottom, (trainHeight + trainSpeed + posY));
-		OutputDebugStringW(tmp);
-
 		if (IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0)
 		{
 			//색칠 + 무효화
@@ -744,7 +649,6 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 			oldBrush = dc.SelectObject(&brush);
 			dc.Rectangle(stationRect);
 			//이전역 부분과 충돌이 있을경우에만 무효화 해주기
-			//if (IntersectRect(tmpRect, rect, subStationRect) && !insCheck[lineSelect][subStationCount] && stationCount >= 1) {
 			if (!insCheck[lineSelect][subStationCount] && stationCount >= 1) {
 				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
 			}
@@ -762,12 +666,23 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 
 		if (stationCount == RAIL_NUM)	// 이동 종료
 		{
-			isReverse = isReverse ? FALSE : TRUE;
-			stationCount = 1;
-			subStationCount = 0;
-			trainSpeed = trainX - trainWidth;
-			//flag = isReverse ? 3 : 1;
-			changeDirection[2] = TRUE;
+			if (cirEnable)
+			{
+				isReverse = isReverse ? FALSE : TRUE;
+				stationCount = 1;
+				subStationCount = 0;
+				trainSpeed = trainX - trainWidth;
+				changeDirection[2] = TRUE;
+				posY = 30;
+				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
+				cirCount++;
+			}
+			else
+			{
+				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
+				//return id;
+			}
+
 		}
 		else if (stationRect.left == subStationRect.left && stationRect.top != subStationRect.top && stationCount >= 1)	// 상, 하 이동
 		{
@@ -783,7 +698,6 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 			moveEnable = insCheck[lineSelect][stationCount + 1] ? FALSE : TRUE;
 
 			if ((trainHeight + trainSpeed + posY) == (stationRect.bottom - 10))	// 일정거리 이동 후 정지
-				//			if ((trainSpeed + posY) == (stationRect.bottom - ((stationRect.bottom - stationRect.top) / 2)))	// 일정거리 이동 후 정지
 			{
 				subStationCount = stationCount;
 				moveEnable = FALSE;
@@ -805,7 +719,6 @@ UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
 			moveEnable = insCheck[lineSelect][stationCount + 1] ? FALSE : TRUE;
 
 			if ((trainWidth + trainSpeed + posX + 20) == stationRect.right)	// 일정거리 이동 후 정지
-				//			if ((trainSpeed + posX) == (stationRect.right - ((stationRect.right - stationRect.left) / 2)))	// 일정거리 이동 후 정지
 			{
 				subStationCount = stationCount;
 				moveEnable = FALSE;
@@ -872,7 +785,7 @@ UINT ThreadMoveTrain(LPVOID param)
 	case 6:
 		errorCode = DrawObject(pMain, pArg->type, pArg->id);
 		break;
-	case 7:
+	case 100:
 		errorCode = 100;
 		dc.SelectObject(&brush);
 		TestDrawObject(pMain);
