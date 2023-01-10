@@ -4,9 +4,8 @@
 #define SUM_RAIL_NUM 5	// 선로 개수
 
 #define RAIL_NUM 13	// 레일 개수
-#define SMALL_RAIL_NUM 9	// 레일 개수
-#define SUB_RAIL_NUM 5	// 레일 개수
-#define LONG_RAIL_NUM 15	// 레일 개수
+#define SMALL_RAIL_NUM 19	// 레일 개수
+#define SUB_RAIL_NUM 6	// 레일 개수
 
 struct ThreadArg
 {
