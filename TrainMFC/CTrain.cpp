@@ -22,6 +22,9 @@ int testRailTop[RAIL_NUM] = { 10,10,10,10, 60, 60, 110, 160, 160, 160, 110, 110,
 int testRailRight[RAIL_NUM] = { 620, 720, 820, 920, 920, 1020, 1020, 1020, 920, 820, 820, 720, 620 };
 int testRailBottom[RAIL_NUM] = { 60,60,60,60, 110, 110, 160, 210, 210, 210, 160, 160, 160 };
 */
+
+int firstRailLeft[RAIL_NUM] = { 10, 110, 190, 280, 400, 520, 700, 820, 920, 1080, 1400 };
+
 int secondRailLeft[RAIL_NUM] = { 10, 10, 110, 110, 110, 10, 10, 10, 110, 220, 220, 220, 220, 220, 220, 120 };
 int secondRailTop[RAIL_NUM] = { 170, 220, 220, 270, 320, 320, 370, 420, 420, 420, 380, 320, 270, 210, 160, 160 };
 int secondRailRight[RAIL_NUM] = { 110, 110, 210, 210, 210, 110, 110, 110, 220, 310, 310, 310, 310, 310, 310, 220 };
@@ -32,12 +35,9 @@ int thirdRailTop[RAIL_NUM] = { 210, 210, 210, 210 };
 int thirdRailRight[RAIL_NUM] = { 420, 620, 920, 1420 };
 int thirdRailBottom[RAIL_NUM] = { 270, 270, 270, 270 };
 
-int firstRailLeft[RAIL_NUM] = {10, 110, 190, 280, 400, 520, 700, 820, 920, 1080, 1400};
-
-//역에 열차가 있는지 확인
-BOOL insCheck[LINE_NUM][RAIL_NUM] = { FALSE };
-BOOL testInsCheck[RAIL_NUM] = { FALSE };
+BOOL insCheck[LINE_NUM][RAIL_NUM] = { FALSE }; //역에 열차가 있는지 확인
 BOOL startInsCheck[LINE_NUM] = { FALSE };	// 시작역에 열차가 있는지 확인
+
 //겹치는 구역
 BOOL rectResult;
 CRect testRect;
@@ -165,7 +165,6 @@ BOOL CTrain::OnEraseBkgnd(CDC* pDC)
 
 UINT DrawObject(LPVOID param, int type, UINT id)
 {
-	CTrain* pMain = (CTrain*)param;
 	HwndArg* pArg = (HwndArg*)param;
 	CDC dc;
 	HDC hdc = ::GetDC(pArg->hwnd);
@@ -178,9 +177,9 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 	int flag = 1;			//열차 이동 방향		1 : Right / 2 : Down / 3 : Left / 4 : Up
 	int posX = 0;			//초기 x위치
 	int posY = 0;			//초기 y위치
-	int stationCount = 0;	//현재 도착역
-	int subStationCount = 0;//정차이후 출발역
-	int lineSelect = 0;		//선로 번호저장
+	int stationCount = 0;	//현재역 좌표 번호
+	int subStationCount = 0;//이전역 좌표 번호
+	int lineSelect = 0;		//선로 번호(저장용)
 
 	CRect stationRect;		//현재역 영역
 	CRect subStationRect;	//이전역 영역
@@ -215,7 +214,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 	switch (type)	//선로 선택
 	{
 	case 1:
-		lineSelect = type - 1;
 		arraySize = (sizeof(firstRailLeft) / sizeof(*firstRailLeft)) / 2;
 		for (int i = 0; i < arraySize; i++)
 		{
@@ -229,7 +227,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		trainHeight = 15;
 		break;
 	case 2:
-		lineSelect = type - 1;
 		for (int i = 0; i < RAIL_NUM; i++)
 		{
 			TrailLeft[i] = secondRailLeft[i];
@@ -246,7 +243,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		posY = 160;
 		break;
 	case 3:
-		lineSelect = type - 1;
 		for (int i = 0; i < RAIL_NUM; i++)
 		{
 			TrailLeft[i] = thirdRailLeft[i];
@@ -264,7 +260,6 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		posY = 210;
 		break;
 	case 4:
-		lineSelect = type - 1;
 		for (int i = 0; i < RAIL_NUM; i++)
 		{
 			TrailLeft[i] = secondRailLeft[i];
@@ -301,7 +296,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		tmpTrailBottom[i] = 0 == lineSelect ? (TrailBottom[i] + 30) : TrailBottom[i];
 	}
 
-	rect = CRect(trainSpeed + posX, trainY - trainHeight, trainSpeed + trainWidth, trainY);	//열차 초기 위치 설정
+	lineSelect = type - 1;
 	dc.Attach(hdc);
 
 	while (TRUE) {
@@ -375,9 +370,8 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
 
 		CBrush brush;
-		CBrush* oldBrush = dc.SelectObject(&brush);
+		CBrush* oldBrush;
 
-		dc.SelectObject(oldBrush);
 		dc.Rectangle(rect);	//열차 그리기
 
 		if (IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0)
@@ -390,7 +384,8 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			if (!insCheck[lineSelect][subStationCount] && stationCount >= 1) {
 				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
 			}
-
+			dc.SelectObject(oldBrush);
+			brush.DeleteObject();
 		}
 		else if (IntersectRect(tmpRect, rect, subStationRect) && subStationCount >= 0)
 		{
@@ -399,7 +394,8 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			oldBrush = dc.SelectObject(&brush);
 			dc.Rectangle(subStationRect);
 			insCheck[lineSelect][subStationCount] = FALSE;
-
+			dc.SelectObject(oldBrush);
+			brush.DeleteObject();
 		}
 
 		if (stationCount == RAIL_NUM)	// 이동 종료
@@ -430,7 +426,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		{
 			changeDirection[1] = TRUE;
 
-			if (changeDirection[0])
+			if (changeDirection[0])	// 좌, 우 이동에서 넘어오면 값 조정
 			{
 				trainSpeed = trainY - trainHeight;
 				changeDirection[0] = FALSE;
@@ -451,7 +447,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		{
 			changeDirection[0] = TRUE;
 
-			if (changeDirection[1])
+			if (changeDirection[1])	// 상, 하 이동에서 넘어오면 값 조정
 			{
 				trainSpeed = trainX - trainWidth;
 				changeDirection[1] = FALSE;
