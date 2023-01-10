@@ -6,11 +6,12 @@
 #define RAIL_NUM 13	// 레일 개수
 #define SMALL_RAIL_NUM 9	// 레일 개수
 #define SUB_RAIL_NUM 5	// 레일 개수
+#define LONG_RAIL_NUM 15	// 레일 개수
 
 struct ThreadArg
 {
 	HWND hwnd;
-	int type;
+	int type;  //어느 선로 사용할지
 };
 
 struct HwndArg
@@ -43,20 +44,14 @@ public:
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedStop();
 	CRect trainSize;
-	BOOL startFlag;
 	
 	CWinThread* m_thread_move[5];  //열차 쓰레드
 	ThreadArg arg1;
 	HwndArg hWndArg;
-	BOOL trainTimerWait; //열차 배차간격용 타이머 불인
-
-	
 
 	afx_msg void OnPaint();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	
-	
-	//afx_msg UINT DrawObject(LPVOID param);
 	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
 	CStatic testText1;
 	CStatic testText2;
