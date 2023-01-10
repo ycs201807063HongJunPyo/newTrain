@@ -5,7 +5,7 @@
 
 #define RAIL_NUM 13	// 레일 개수
 #define SMALL_RAIL_NUM 9	// 레일 개수
-#define SUB_RAIL_NUM 4	// 레일 개수
+#define SUB_RAIL_NUM 5	// 레일 개수
 
 struct ThreadArg
 {
@@ -45,9 +45,6 @@ public:
 	CRect trainSize;
 	BOOL startFlag;
 	
-
-
-	BITMAP bmpInfo;  //비트맵
 	CWinThread* m_thread_move[5];  //열차 쓰레드
 	ThreadArg arg1;
 	HwndArg hWndArg;
