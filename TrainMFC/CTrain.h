@@ -42,16 +42,10 @@ public:
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedStop();
 
-
-	BITMAP bmpInfo;  //비트맵
 	CWinThread* m_thread_move[THREAD_NUM];  //열차 쓰레드
 	ThreadArg arg1;
 	HwndArg hWndArg;
 
 	afx_msg void OnPaint();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
-	CStatic testText1;
-	CStatic testText2;
-
-	afx_msg void OnEnChangeEditLine();
 };
