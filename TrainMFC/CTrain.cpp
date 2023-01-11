@@ -82,16 +82,19 @@ void CTrain::OnBnClickedCreate()
 	arg1.hwnd = this->m_hWnd;
 	trainAreaFlag = GetDlgItemInt(IDC_EDIT_LINE);
 	arg1.type = trainAreaFlag;
-	if (trainCount < TRAIN_HAVE_NUM && startInsCheck[(trainAreaFlag - 1)] == FALSE) {
-		for (int i = 0; i < TRAIN_HAVE_NUM; i++) {
-			if (m_thread_move[i] == NULL) {
-				arg1.numberId = i + 1000;
-				m_thread_move[trainCount] = AfxBeginThread(ThreadMoveTrain, &arg1, THREAD_PRIORITY_NORMAL, 0, 0);
-				trainCount++;
-				break;
-			}
+	CString testi;
+	
+	for (int i = 0; i < TRAIN_HAVE_NUM; i++)
+	{
+		if (m_thread_move[i] != NULL) {
+			testi.Format(L"%d", i);
+			OutputDebugStringW(testi + " \n");
 		}
-		
+	}
+	if (trainCount < TRAIN_HAVE_NUM && startInsCheck[(trainAreaFlag - 1)] == FALSE) {
+		arg1.numberId = trainCount + 1000;
+		m_thread_move[trainCount] = AfxBeginThread(ThreadMoveTrain, &arg1, THREAD_PRIORITY_NORMAL, 0, 0);
+		trainCount++;
 	}
 }
 
@@ -300,8 +303,6 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 	CRect safeStationRect;	//다음역 영역
 
 	while (1) {
-		//dc.DrawText(_T("tt"), rect, DT_CENTER);
-
 		Sleep(10);  //기본 대기
 		flagChange = 0; //플래그 조정자 초기화
 		invalidateCheck = FALSE; //화면 무효화 초기화
@@ -343,8 +344,6 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		subStationRect = CRect(threadRailTopLeft[subStationCount], threadRailBottomLeft[subStationCount], threadRailTopRight[subStationCount], threadRailBottomRight[subStationCount]);
 		safeStationRect = CRect(threadRailTopLeft[safeStationCount], threadRailBottomLeft[safeStationCount], threadRailTopRight[safeStationCount], threadRailBottomRight[safeStationCount]);
 
-		
-
 		//반복구간이 아니고 겹쳐있다면
 		IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0 && lineSelect != 2 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
 		if (IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0)
@@ -353,7 +352,6 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 			//역 초록색
 			RectPaint(param, 0, 200, 0, stationRect);
 
-			//여기에 열차 색상, 번호 넣으면 처음에 안나오는거랑 이동이 부자연스러운거 빼면 잘 나옴
 			//열차 색상 지정
 			RectPaint(param, colorR, colorG, colorB, rect);
 			//열차 번호
@@ -368,11 +366,12 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		{
 			//역 빨강색
 			RectPaint(param, 200, 0, 0, subStationRect);
+			//열차 색상 지정
+			RectPaint(param, colorR, colorG, colorB, rect);
+			//열차 번호
+			dc.DrawText(trainNumber, rect, DT_CENTER);
 			insCheck[lineSelect][subStationCount] = FALSE;
-
 		}
-		//기본 열차  색상, 번호 위치
-		
 
 		//정차, 방향 조정하기
 		lineRangeX = (threadRailTopRight[stationCount] - threadRailTopLeft[stationCount]) / 2;
@@ -380,6 +379,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		//생성 후 이동
 		if (stationCount == 0)
 		{
+
 			if ((1 == flag || 3 == flag) && (lineRangeX + trainSpeed) == threadRailTopRight[stationCount])
 			{
 				startInsCheck[lineSelect] = TRUE;
@@ -438,6 +438,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 				//내선 선로 조정자
 				if (lineSelect == 0) {
 					if (stationCount == 13) {
+
 						//내선 초기값 지정
 						startInsCheck[lineSelect] = TRUE;
 						insCheck[lineSelect][subStationCount] = FALSE;
@@ -449,6 +450,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 						trainY = 0;
 						posX = 0;
 						posY = 20;
+						continue;
 					}
 				}
 				//5호선 선로 조정자(하행)
@@ -616,7 +618,6 @@ UINT ThreadMoveTrain(LPVOID param)
 		}
 		else {
 			errorCode = DrawObject(pMain, pArg->type, pArg->numberId);
-
 		}
 		break;
 	case 4:
@@ -637,6 +638,7 @@ UINT ThreadMoveTrain(LPVOID param)
 	else if (errorCode >= 1000) {
 		OutputDebugStringW(_T("end train\n"));
 		::GetExitCodeThread(pMain->m_thread_move[(errorCode - 1000)], &dwResult);
+		
 		trainCount--;
 	}
 	dc.Detach();
