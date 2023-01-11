@@ -8,8 +8,10 @@
 struct ThreadArg
 {
 	HWND hwnd;
-	int type;	// 선로 번호
-	UINT id;	// 스레드 번호
+	int type;				// 선로 번호
+	UINT cycleCount;		// 순환 횟수
+	BOOL checkCycleEnable;	// 순환 여부
+	UINT id;				// 스레드 번호
 };
 
 struct HwndArg
