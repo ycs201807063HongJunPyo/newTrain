@@ -163,12 +163,32 @@ BOOL CTrain::OnEraseBkgnd(CDC* pDC)
 	return CDialog::OnEraseBkgnd(pDC);
 }
 
+void DrawFillRect(LPVOID param, CRect fillRect, int r, int g, int b)
+{
+	HwndArg* pArg = (HwndArg*)param;
+	CDC dc;
+	HDC hdc = ::GetDC(pArg->hwnd);
+	CBrush brush;
+	CBrush* oldBrush;
+
+	dc.Attach(hdc);
+
+	//현재 영역 칠하기
+	brush.CreateSolidBrush(RGB(r, g, b));
+	oldBrush = dc.SelectObject(&brush);
+	dc.Rectangle(fillRect);
+	dc.SelectObject(oldBrush);
+	brush.DeleteObject();
+
+	dc.Detach();
+}
+
 UINT DrawObject(LPVOID param, int type, UINT id)
 {
 	HwndArg* pArg = (HwndArg*)param;
 	CDC dc;
 	HDC hdc = ::GetDC(pArg->hwnd);
-	CRect rect;				//열차
+	CRect train;			//열차
 	int trainSpeed = 0;		//열차 속도
 	int trainX = 50;		//x기억
 	int trainY = 50;		//y기억
@@ -205,11 +225,13 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 	int count = 0;			//실제 선로 개수
 	int cirCount = 0;		//순환 횟수(증가용)
 	int cirCountText = 1;	//순환 횟수(저장용)
-	BOOL cirEnable = FALSE;	//순환 가능 여부
+	BOOL cycleEnable = FALSE;	//순환 가능 여부
+	BOOL enableInvalid = FALSE;	//화면 업데이트 여부
 	int arraySize = 0;
+	
 
 	cirCountText = (numCirCount * 2);
-	cirEnable = checkCirEnable;
+	cycleEnable = checkCirEnable;
 
 	switch (type)	//선로 선택
 	{
@@ -224,7 +246,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			count = i;
 		}
 		trainY = 30;
-		trainHeight = 15;
+		trainHeight = 20;
 		break;
 	case 2:
 		for (int i = 0; i < RAIL_NUM; i++)
@@ -288,15 +310,28 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		break;
 	}
 
-	for (int i = 0; i <= count; i++)
+	lineSelect = type - 1;
+
+	if (0 == lineSelect)
 	{
-		tmpTrailLeft[i] = TrailLeft[i];
-		tmpTrailTop[i] = 0 == lineSelect ? (TrailTop[i] + 30) : TrailTop[i];
-		tmpTrailRight[i] = TrailRight[i];
-		tmpTrailBottom[i] = 0 == lineSelect ? (TrailBottom[i] + 30) : TrailBottom[i];
+		for (int i = 0; i <= count; i++)
+		{
+			tmpTrailLeft[i] = TrailLeft[i];
+			tmpTrailTop[i] = (TrailTop[i] + 30);
+			tmpTrailRight[i] = TrailRight[i];
+			tmpTrailBottom[i] = (TrailBottom[i] + 30);
+		}
+	}
+	else {
+		for (int i = 0; i <= count; i++)
+		{
+			tmpTrailLeft[i] = TrailLeft[i];
+			tmpTrailTop[i] = TrailTop[i];
+			tmpTrailRight[i] = TrailRight[i];
+			tmpTrailBottom[i] = TrailBottom[i];
+		}
 	}
 
-	lineSelect = type - 1;
 	dc.Attach(hdc);
 
 	while (TRUE) {
@@ -305,7 +340,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		if (cirCount == cirCountText)	// 순환 종료 및 반환
 		{
 			InvalidateRect(pArg->hwnd, subStationRect, TRUE);
-			return id;
+			break;
 		}
 
 		if (isReverse && changeDirection[2])	// 방향 전환 : 역방향
@@ -324,11 +359,10 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			for (int i = 0; i <= count; i++)
 			{
 				TrailLeft[i] = tmpTrailLeft[i];
-				TrailTop[i] = tmpTrailTop[i];
+				TrailTop[i] = (tmpTrailTop[i] - 30);
 				TrailRight[i] = tmpTrailRight[i];
-				TrailBottom[i] = tmpTrailBottom[i];
+				TrailBottom[i] = (tmpTrailBottom[i] - 30);
 			}
-			cirCount++;
 			changeDirection[2] = FALSE;
 		}
 
@@ -336,30 +370,31 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		{
 		case 1:	//오른
 			moveEnable ? trainSpeed += 10 : Sleep(10);
-			rect = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
-			InvalidateRect(pArg->hwnd, rect, TRUE);
+			train = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
+			//InvalidateRect(pArg->hwnd, train, TRUE);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case 2:	//아래
 			moveEnable ? trainSpeed += 10 : Sleep(10);
-			rect = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
-			InvalidateRect(pArg->hwnd, rect, TRUE);
+			train = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
+			InvalidateRect(pArg->hwnd, train, TRUE);
 			trainY = trainSpeed + trainHeight;
 			break;
 		case 3:	//왼
 			moveEnable ? trainSpeed -= 10 : Sleep(10);
-			rect = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
-			InvalidateRect(pArg->hwnd, rect, TRUE);
+			train = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
+			InvalidateRect(pArg->hwnd, train, TRUE);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case 4:	//위
 			moveEnable ? trainSpeed -= 10 : Sleep(10);
-			rect = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
-			InvalidateRect(pArg->hwnd, rect, TRUE);
+			train = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
+			InvalidateRect(pArg->hwnd, train, TRUE);
 			trainY = trainSpeed + trainHeight;
 			break;
 		default:
 			OutputDebugStringW(_T("\r\nCTrain >> DrawObject >> Out of Flag Range\r\n"));
+			dc.Detach();
 			return 2;
 			break;
 		}
@@ -367,40 +402,31 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 		stationRect = CRect(TrailLeft[stationCount], TrailTop[stationCount], TrailRight[stationCount], TrailBottom[stationCount]);
 		subStationRect = CRect(TrailLeft[subStationCount], TrailTop[subStationCount], TrailRight[subStationCount], TrailBottom[subStationCount]);
 
-		IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
+		IntersectRect(tmpRect, train, stationRect) && stationCount >= 0 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
 
-		CBrush brush;
-		CBrush* oldBrush;
+		dc.Rectangle(train);	//열차 그리기
+		testStr.Format(_T("%d %d || %d %d || %d %d\n"), train.left, train.top, stationRect.left, stationRect.top, subStationRect.right, subStationRect.bottom);
+		OutputDebugStringW(testStr);
 
-		dc.Rectangle(rect);	//열차 그리기
-
-		if (IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0)
+		if (IntersectRect(tmpRect, train, stationRect) && stationCount >= 0)
 		{
-			//색칠 + 무효화
-			brush.CreateSolidBrush(RGB(0, 255, 0));       // 초록
-			oldBrush = dc.SelectObject(&brush);
-			dc.Rectangle(stationRect);
+			DrawFillRect(param, stationRect, 0, 255, 0);
 			//이전역 부분과 충돌이 있을경우에만 무효화 해주기
-			if (!insCheck[lineSelect][subStationCount] && stationCount >= 1) {
+			if (!insCheck[lineSelect][subStationCount] && stationCount >= 1 && enableInvalid) {
 				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
+				enableInvalid = FALSE;
 			}
-			dc.SelectObject(oldBrush);
-			brush.DeleteObject();
 		}
-		else if (IntersectRect(tmpRect, rect, subStationRect) && subStationCount >= 0)
+		else if (IntersectRect(tmpRect, train, subStationRect) && subStationCount >= 0)
 		{
-			//색만 칠하기
-			brush.CreateSolidBrush(RGB(255, 0, 0));       // 빨강
-			oldBrush = dc.SelectObject(&brush);
-			dc.Rectangle(subStationRect);
+			DrawFillRect(param, subStationRect, 255, 0, 0);
 			insCheck[lineSelect][subStationCount] = FALSE;
-			dc.SelectObject(oldBrush);
-			brush.DeleteObject();
+			enableInvalid = TRUE;
 		}
 
 		if (stationCount == RAIL_NUM)	// 이동 종료
 		{
-			if (cirEnable)
+			if (cycleEnable)
 			{
 				isReverse = isReverse ? FALSE : TRUE;
 				stationCount = 1;
@@ -410,7 +436,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 				cirCount++;
 				if (0 == lineSelect)
 				{
-					posY = 30;
+					posY = isReverse ? 30 : 0;
 					InvalidateRect(pArg->hwnd, subStationRect, TRUE);
 				}
 				
@@ -418,9 +444,30 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			else
 			{
 				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
-				return id;
+				break;
 			}
 			
+		}
+		else if (stationCount == 0 && !isReverse)	// 생성 후 이동
+		{
+			moveEnable = insCheck[lineSelect][stationCount + 1] || startInsCheck[lineSelect] ? FALSE : TRUE;
+			if ((1 == flag || 3 == flag) && (trainWidth + trainSpeed + posX) == (stationRect.right - 20) && moveEnable)	// 좌, 우
+			{
+				subStationCount = stationCount;
+				startInsCheck[lineSelect] = TRUE;
+				DrawFillRect(param, stationRect, 255, 0, 0);
+				Sleep(1000);
+				stationCount++;
+			}
+			else if ((2 == flag || 4 == flag) && (trainHeight + trainSpeed + posY) == (stationRect.bottom - 10) && moveEnable)	// 상, 하
+			{
+				subStationCount = stationCount;
+				startInsCheck[lineSelect] = TRUE;
+				DrawFillRect(param, stationRect, 255, 0, 0);
+				Sleep(1000);
+				stationCount++;
+			}
+
 		}
 		else if (stationRect.left == subStationRect.left && stationRect.top != subStationRect.top && stationCount >= 1)	// 상, 하 이동
 		{
@@ -439,6 +486,7 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			{
 				subStationCount = stationCount;
 				moveEnable = FALSE;
+				DrawFillRect(param, stationRect, 255, 0, 0);
 				Sleep(1000);
 				stationCount++;
 			}
@@ -460,28 +508,11 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 			{
 				subStationCount = stationCount;
 				moveEnable = FALSE;
+				DrawFillRect(param, stationRect, 255, 0, 0);
 				Sleep(1000);
+				OutputDebugStringW(_T("===================================================\n"));
 				stationCount++;
 			}
-		}
-		else if (stationCount == 0 && !isReverse)	// 생성 후 이동
-		{
-			moveEnable = insCheck[lineSelect][stationCount + 1] || startInsCheck[lineSelect] ? FALSE : TRUE;
-			if ((1 == flag || 3 == flag) && (trainWidth + trainSpeed + posX + 20) == stationRect.right && moveEnable)	// 좌, 우
-			{
-				subStationCount = stationCount;
-				startInsCheck[lineSelect] = TRUE;
-				Sleep(1000);
-				stationCount++;
-			}
-			else if ((2 == flag || 4 == flag) && (trainHeight + trainSpeed + posY) == (stationRect.bottom - 10) && moveEnable)	// 상, 하
-			{
-				subStationCount = stationCount;
-				startInsCheck[lineSelect] = TRUE;
-				Sleep(1000);
-				stationCount++;
-			}
-
 		}
 		else // 사용하지 않는 개수 증가
 		{
@@ -490,8 +521,9 @@ UINT DrawObject(LPVOID param, int type, UINT id)
 
 		stationCount == 2 ? startInsCheck[lineSelect] = FALSE : NULL;	// 초기 시작 충돌 방지
 	}
-
-	return 1;
+	
+	dc.Detach();
+	return id;
 }
 
 UINT TestDrawObject(LPVOID param)	//그리기 및 이동 테스트용
@@ -767,29 +799,20 @@ UINT ThreadMoveTrain(LPVOID param)
 
 	dc.Attach(hdc);
 	dc.SelectObject(&brush);
-	switch (pArg->type)
+
+	if (pArg->type > 0 && pArg->type < 5)
 	{
-	case 1:
 		errorCode = DrawObject(pMain, pArg->type, pArg->id);
-		break;
-	case 2:
-		errorCode = DrawObject(pMain, pArg->type, pArg->id);
-		break;
-	case 3:
-		errorCode = DrawObject(pMain, pArg->type, pArg->id);
-		break;
-	case 4:
-		errorCode = DrawObject(pMain, pArg->type, pArg->id);
-		break;
-	case 100:
+	}
+	else if (100 == pArg->type)
+	{
 		errorCode = 100;
-		dc.SelectObject(&brush);
 		TestDrawObject(pMain);
-		break;
-	default:
+	}
+	else
+	{
 		errorCode = 2;
 		OutputDebugStringW(_T("\r\nCTrain >> ThreadMoveTrain >> Out of ThreadArg.type Range\r\n"));
-		break;
 	}
 
 	if (errorCode >= 1000 && errorCode < 10000)
