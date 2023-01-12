@@ -18,8 +18,8 @@ int railBottomRight[RAIL_NUM] = { 60,60,60,60,60,110,160,160,160,160,160,110,60 
 
 int soloRailTopLeft[LONG_RAIL_NUM] = { 860, 960, 1060, 1160, 1160, 1160, 1160, 1260, 1360, 1360, 1360, 1360, 1360, 1360, 1160, 960, 760, 660, 660, 560};
 int soloRailTopRight[LONG_RAIL_NUM] = { 960, 1060, 1160, 1260, 1260, 1260, 1260, 1360, 1460, 1460, 1460, 1460, 1460, 1460, 1360, 1160, 960, 760, 760, 660 };
-int soloRailBottomLeft[LONG_RAIL_NUM] = { 210, 210, 210, 210, 260, 310, 360, 360, 360, 310, 260, 210, 160, 110, 110, 110, 110, 110, 160, 160 };
-int soloRailBottomRight[LONG_RAIL_NUM] = { 260, 260, 260, 260 , 310, 360, 410, 410, 410, 360, 310, 260, 210, 160, 160, 160, 160, 160, 210, 210 };
+int soloRailBottomLeft[LONG_RAIL_NUM] = { 210, 210, 210, 210, 260, 310, 360, 360, 360, 310, 260, 210, 160, 110, 110, 110, 110, 110, 60, 60 };
+int soloRailBottomRight[LONG_RAIL_NUM] = { 260, 260, 260, 260 , 310, 360, 410, 410, 410, 360, 310, 260, 210, 160, 160, 160, 160, 160, 110, 110 };
 
 //열차 구역 반복(one train NEED)
 int subRailTopLeft[SUB_RAIL_NUM] = { 760, 760, 760, 760, 860, 960 };
@@ -83,7 +83,7 @@ void CTrain::OnBnClickedCreate()
 	trainAreaFlag = GetDlgItemInt(IDC_EDIT_LINE);
 	arg1.type = trainAreaFlag;
 	CString testi;
-	
+	/*
 	for (int i = 0; i < TRAIN_HAVE_NUM; i++)
 	{
 		if (m_thread_move[i] != NULL) {
@@ -91,6 +91,7 @@ void CTrain::OnBnClickedCreate()
 			OutputDebugStringW(testi + " \n");
 		}
 	}
+	*/
 	if (trainCount < TRAIN_HAVE_NUM && startInsCheck[(trainAreaFlag - 1)] == FALSE) {
 		arg1.numberId = trainCount + 1000;
 		m_thread_move[trainCount] = AfxBeginThread(ThreadMoveTrain, &arg1, THREAD_PRIORITY_NORMAL, 0, 0);
@@ -195,7 +196,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 
 	CDC dc;
 	HDC hdc = ::GetDC(pArg->hwnd);
-	CRect rect;  //열차 렉트
+	CRect trainRect;  //열차 렉트
 	int trainSpeed = 0;  //열차 속도
 
 	int trainX;  //x기억
@@ -222,9 +223,9 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 	int colorG=0;
 	int colorB=0;
 	//train nicknumber
-	CString testNum;
-	testNum.Format(L"%d", (1 + lineSelect) * 10 + trainCount);
-	LPCTSTR trainNumber = testNum;
+	CString trainNumberStr;
+	trainNumberStr.Format(L"%d", (1 + lineSelect) * 10 + trainCount);
+	LPCTSTR trainNumber = trainNumberStr;
 
 
 
@@ -317,26 +318,25 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 				trainSpeed -= 10;
 			}
 		}
-
 		//flag 열차 움직임 조정
 		if (flag == 1) {
 			//오른
-			rect = CRect(trainSpeed, posY, trainSpeed + trainWidth, posY + trainHeight);
+			trainRect = CRect(trainSpeed, posY, trainSpeed + trainWidth, posY + trainHeight);
 			trainX = trainSpeed + trainWidth;
 		}
 		else if (flag == 2) {
 			//아래
-			rect = CRect(trainX - trainWidth, trainSpeed, trainX, trainHeight + trainSpeed);
+			trainRect = CRect(trainX - trainWidth, trainSpeed, trainX, trainHeight + trainSpeed);
 			trainY = trainSpeed + trainHeight;
 		}
 		else if (flag == 3) {
 			//왼
-			rect = CRect(trainSpeed, trainY - trainHeight, trainSpeed + trainWidth, trainY);
+			trainRect = CRect(trainSpeed, trainY - trainHeight, trainSpeed + trainWidth, trainY);
 			trainX = trainSpeed + trainWidth;
 		}
 		else if (flag == 4) {
 			//위
-			rect = CRect(trainX - trainWidth, posY + trainSpeed, trainX, posY + trainHeight + trainSpeed);
+			trainRect = CRect(trainX - trainWidth, posY + trainSpeed, trainX, posY + trainHeight + trainSpeed);
 			trainY = trainSpeed + trainHeight;
 		}
 
@@ -344,35 +344,31 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		subStationRect = CRect(threadRailTopLeft[subStationCount], threadRailBottomLeft[subStationCount], threadRailTopRight[subStationCount], threadRailBottomRight[subStationCount]);
 		safeStationRect = CRect(threadRailTopLeft[safeStationCount], threadRailBottomLeft[safeStationCount], threadRailTopRight[safeStationCount], threadRailBottomRight[safeStationCount]);
 
-		//반복구간이 아니고 겹쳐있다면
-		IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0 && lineSelect != 2 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
-		if (IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0)
+		//반복구간이 아니고 겹쳐있다면 현재 위치에 열차 있다고 표시
+		IntersectRect(tmpRect, trainRect, stationRect) && stationCount >= 0 && lineSelect != 2 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
+		if (IntersectRect(tmpRect, trainRect, stationRect) && stationCount >= 0)
 		{
 			//색칠 + 무효화
 			//역 초록색
 			RectPaint(param, 0, 200, 0, stationRect);
-
-			//열차 색상 지정
-			RectPaint(param, colorR, colorG, colorB, rect);
-			//열차 번호
-			dc.DrawText(trainNumber, rect, DT_CENTER);
-
 			//이전역 부분과 충돌이 있을경우에만 무효화 해주기
 			if (!insCheck[lineSelect][subStationCount] && (stationCount >= 1 || lineWhile == FALSE)) {
 				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
 			}
 		}
-		else if (IntersectRect(tmpRect, rect, subStationRect) && subStationCount >= 0)
+		else if (IntersectRect(tmpRect, &trainRect, subStationRect) && subStationCount >= 0)
 		{
 			//역 빨강색
 			RectPaint(param, 200, 0, 0, subStationRect);
-			//열차 색상 지정
-			RectPaint(param, colorR, colorG, colorB, rect);
-			//열차 번호
-			dc.DrawText(trainNumber, rect, DT_CENTER);
+			
 			insCheck[lineSelect][subStationCount] = FALSE;
 		}
-
+		//열차 색상 지정
+		RectPaint(param, colorR, colorG, colorB, trainRect);
+		//열차 번호
+		dc.DrawText(trainNumber, trainRect, DT_CENTER);
+		//쓰레기 구역 무효화로 열차 번호 보이기
+		InvalidateRect(pArg->hwnd, CRect(5, 5, 5, 5), TRUE);
 		//정차, 방향 조정하기
 		lineRangeX = (threadRailTopRight[stationCount] - threadRailTopLeft[stationCount]) / 2;
 		///선로 이동 방향
@@ -450,7 +446,6 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 						trainY = 0;
 						posX = 0;
 						posY = 20;
-						continue;
 					}
 				}
 				//5호선 선로 조정자(하행)
@@ -531,8 +526,8 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		{
 		case 1:
 			flag = 1;
-			posY = rect.top;
-			trainSpeed = rect.left;
+			posY = trainRect.top;
+			trainSpeed = trainRect.left;
 			break;
 		case 2:
 			flag = 2;
