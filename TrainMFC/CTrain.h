@@ -14,6 +14,7 @@ struct ThreadArg
 	int type;  //어느 선로 사용할지
 	UINT numberId;  // 스레드 번호
 	BOOL isThreadWork;  // 작업중인 스레드인지 판단
+	BOOL isTrainMove;  // 움직이는 열차인지 판단
 };
 
 struct HwndArg
@@ -46,9 +47,10 @@ public:
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedStop();
 	CRect trainSize;
+	
 
-	CWinThread* m_thread_move;  //열차 쓰레드
-	ThreadArg arg1;
+	CWinThread* m_thread_move[TRAIN_HAVE_NUM];  //열차 쓰레드
+	ThreadArg arg1[TRAIN_HAVE_NUM];
 	HwndArg hWndArg;
 
 	afx_msg void OnPaint();
