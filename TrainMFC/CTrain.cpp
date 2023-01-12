@@ -23,15 +23,17 @@ int thirdRailTop[RAIL_NUM] = { 210, 210, 210, 210 };
 int thirdRailRight[RAIL_NUM] = { 420, 620, 920, 1420 };
 int thirdRailBottom[RAIL_NUM] = { 270, 270, 270, 270 };
 
-BOOL insCheck[LINE_NUM][RAIL_NUM] = { FALSE }; //역에 열차가 있는지 확인
-BOOL startInsCheck[LINE_NUM] = { FALSE };	// 시작역에 열차가 있는지 확인
+BOOL insCheck[LINE_NUM][RAIL_NUM] = { FALSE };	//역에 열차가 있는지 확인
+BOOL startInsCheck[LINE_NUM] = { FALSE };		//시작역에 열차가 있는지 확인
 
 //겹치는 구역
 BOOL rectResult;
 CRect testRect;
 
 CString lineEditText = _T("");	//이전 선로 번호
-int trainCount;					//열차갯수
+UINT trainCount;				//열차 개수
+CList<UINT, UINT&> trainNum;	//열차 번호
+BOOL isCreate;				//열차 생성 가능
 
 
 CTrain::CTrain(CWnd* pParent /*=nullptr*/)
@@ -68,51 +70,9 @@ END_MESSAGE_MAP()
 // CTrain 메시지 처리기
 UINT ThreadMoveTrain(LPVOID param);
 
-void CTrain::OnBnClickedCreate()
-{
-	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
-	CString tmpStr = _T("");
-
-	GetDlgItemText(IDC_EDIT_LINE, tmpStr);
-	UINT numLine = _wtoi(tmpStr);			//선로 번호
-	GetDlgItemText(IDC_EDITCirCount, tmpStr);
-	UINT numCirCount = "" == tmpStr || "0" == tmpStr ? 1 : _wtoi(tmpStr);	//순환 횟수
-	BOOL checkCirEnable = ((CButton*)GetDlgItem(IDC_CheckCir))->GetCheck();	//순환 여부
-	
-	arg1.hwnd = this->m_hWnd;
-	arg1.type = numLine;
-	arg1.cycleCount = numCirCount;
-	arg1.checkCycleEnable = checkCirEnable;
-	if (trainCount <= (THREAD_NUM - 1)) {
-		arg1.id = trainCount + 1000;
-		m_thread_move[trainCount] = AfxBeginThread(ThreadMoveTrain, &arg1, THREAD_PRIORITY_NORMAL, 0, 0);
-		trainCount++;
-	}
-}
-
-void CTrain::OnBnClickedStart()
-{
-	for (int i = 0; i < trainCount; i++)
-	{
-		m_thread_move[i]->ResumeThread();
-	}
-}
-
-
-void CTrain::OnBnClickedStop()
-{
-	for (int i = 0; i < trainCount; i++)
-	{
-		m_thread_move[i]->SuspendThread();
-	}
-}
-
 void CTrain::OnPaint()
 {
 	CPaintDC dc(this); // device context for painting
-	CDC MemDC;
-
-	MemDC.CreateCompatibleDC(&dc);	// 화면 DC와 호환되는 메모리 DC를 생성
 
 	//역 테두리 설정
 	CPen myPen(PS_SOLID, 1, RGB(0, 0, 0));
@@ -129,8 +89,76 @@ void CTrain::OnPaint()
 		dc.Rectangle(secondRailLeft[i], secondRailTop[i], secondRailRight[i], secondRailBottom[i]);
 		dc.Rectangle(thirdRailLeft[i], thirdRailTop[i], thirdRailRight[i], thirdRailBottom[i]);
 	}
-	
+
 	dc.SelectObject(oldPen);
+}
+
+void CTrain::OnBnClickedCreate()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	if (isCreate) return;
+	
+
+	CString tmpStr = _T("");
+
+	GetDlgItemText(IDC_EDIT_LINE, tmpStr);
+	UINT numLine = _wtoi(tmpStr);			//선로 번호
+	GetDlgItemText(IDC_EDITCirCount, tmpStr);
+	UINT numCirCount = "" == tmpStr || "0" == tmpStr ? 1 : _wtoi(tmpStr);	//순환 횟수
+	BOOL checkCirEnable = ((CButton*)GetDlgItem(IDC_CheckCir))->GetCheck();	//순환 여부
+
+	arg1.hwnd = this->m_hWnd;
+	arg1.type = numLine;
+	arg1.cycleCount = numCirCount;
+	arg1.checkCycleEnable = checkCirEnable;
+	while (TRUE)
+	{
+		if (trainCount < THREAD_NUM)
+		{
+			if (NULL == trainNum.Find(trainCount))
+			{
+				trainNum.AddHead(trainCount);
+				arg1.id = trainCount + 1000;
+				m_thread_move[trainCount] = AfxBeginThread(ThreadMoveTrain, &arg1, THREAD_PRIORITY_NORMAL, 0, 0);
+				isCreate = TRUE;
+				break;
+			}
+			else if(NULL != trainNum.Find(trainCount))
+			{
+				trainCount++;
+			}
+		}
+		else
+		{
+			OutputDebugStringW(_T("Out of Thread_Num\n"));
+			break;
+		}
+	}
+}
+
+void CTrain::OnBnClickedStart()
+{
+	for (int i = 0; i < THREAD_NUM; i++)
+	{
+		if (m_thread_move[i] != NULL)
+		{
+			m_thread_move[i]->ResumeThread();
+		}
+	}
+}
+
+void CTrain::OnBnClickedStop()
+{
+	CString tmp;
+	for (int i = 0; i < THREAD_NUM; i++)
+	{
+		if (m_thread_move[i] != NULL)
+		{
+			tmp.Format(_T("%d\n"), i);
+			OutputDebugStringW(tmp);
+			m_thread_move[i]->SuspendThread();
+		}
+	}
 }
 
 BOOL CTrain::OnEraseBkgnd(CDC* pDC)
@@ -163,6 +191,27 @@ void DrawFillRect(LPVOID param, CRect fillRect, int r, int g, int b)
 	::ReleaseDC(pArg->hwnd, hdc);
 }
 
+void DrawTrainNum(LPVOID param, CRect train, UINT id)
+{
+	HwndArg* pArg = (HwndArg*)param;
+	CDC dc;
+	HDC hdc = ::GetDC(pArg->hwnd);
+	CString trainNum;
+	CPen pen(PS_SOLID, 1, RGB(0, 0, 0));
+	CPen* oldpen;
+
+	dc.Attach(hdc);
+	oldpen = dc.SelectObject(&pen);
+	dc.Rectangle(train);
+	trainNum.Format(_T("%d"), id);
+	dc.DrawText(trainNum, train, DT_CENTER);
+	UpdateWindow(pArg->hwnd);
+	
+	pen.DeleteObject();
+	dc.Detach();
+	::ReleaseDC(pArg->hwnd, hdc);
+}
+
 UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, UINT id)
 {
 	HwndArg* pArg = (HwndArg*)param;
@@ -175,7 +224,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 	int trainWidth = 50;	//열차 가로 길이
 	int trainHeight = 25;	//열차 세로 길이
 	int flag = 1;			//열차 이동 방향		1 : Right / 2 : Down / 3 : Left / 4 : Up
-	int posX = 0;			//초기 x위치
+	int posX = 10;			//초기 x위치
 	int posY = 0;			//초기 y위치
 	int stationCount = 0;	//현재역 좌표 번호
 	int subStationCount = 0;//이전역 좌표 번호
@@ -201,12 +250,11 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 	int tmpTrailRight[RAIL_NUM] = { 0 };
 	int tmpTrailBottom[RAIL_NUM] = { 0 };
 
-	CString testStr;		///Test String
-	int count = 0;			//실제 선로 개수
-	int cirCount = 0;		//순환 횟수(증가용)
-	int cirCountText = 1;	//순환 횟수(저장용)
+	CString testStr;			///Test String
+	int count = 0;				//실제 선로 개수
+	int cirCount = 0;			//순환 횟수(증가용)
+	int cirCountText = 1;		//순환 횟수(저장용)
 	BOOL cycleEnable = FALSE;	//순환 가능 여부
-	BOOL enableInvalid = FALSE;	//화면 업데이트 여부
 	int arraySize = 0;
 	
 
@@ -258,7 +306,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 				break;
 			}
 		}
-		posX = 300;
+		posX = 310;
 		posY = 210;
 		break;
 	case 4:
@@ -364,25 +412,21 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 		case 1:	//오른
 			moveEnable ? trainSpeed += 5 : Sleep(10);
 			train = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
-			InvalidateRect(pArg->hwnd, train, TRUE);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case 2:	//아래
 			moveEnable ? trainSpeed += 5 : Sleep(10);
 			train = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
-			InvalidateRect(pArg->hwnd, train, TRUE);
 			trainY = trainSpeed + trainHeight;
 			break;
 		case 3:	//왼
 			moveEnable ? trainSpeed -= 5 : Sleep(10);
 			train = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
-			InvalidateRect(pArg->hwnd, train, TRUE);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case 4:	//위
 			moveEnable ? trainSpeed -= 5 : Sleep(10);
 			train = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
-			InvalidateRect(pArg->hwnd, train, TRUE);
 			trainY = trainSpeed + trainHeight;
 			break;
 		default:
@@ -393,30 +437,26 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 			break;
 		}
 
+//		InvalidateRect(pArg->hwnd, train, TRUE);
 		stationRect = CRect(TrailLeft[stationCount], TrailTop[stationCount], TrailRight[stationCount], TrailBottom[stationCount]);
 		subStationRect = CRect(TrailLeft[subStationCount], TrailTop[subStationCount], TrailRight[subStationCount], TrailBottom[subStationCount]);
-
 		IntersectRect(tmpRect, train, stationRect) && stationCount >= 0 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
-
-		dc.Rectangle(train);	//열차 그리기
-		testStr.Format(_T("%d %d || %d %d || %d %d\n"), train.left, train.top, stationRect.left, stationRect.top, subStationRect.right, subStationRect.bottom);
-		OutputDebugStringW(testStr);
-
+//		dc.Rectangle(train);	//열차 그리기
+		
 		if (IntersectRect(tmpRect, train, stationRect) && stationCount >= 0)
 		{
-			DrawFillRect(param, stationRect, 0, 255, 0);
 			//이전역 부분과 충돌이 있을경우에만 무효화 해주기
-			if (!insCheck[lineSelect][subStationCount] && stationCount >= 1 && enableInvalid) {
+			if (!insCheck[lineSelect][subStationCount] && stationCount >= 1) {
 				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
-				enableInvalid = FALSE;
 			}
 		}
 		else if (IntersectRect(tmpRect, train, subStationRect) && subStationCount >= 0)
 		{
 			DrawFillRect(param, subStationRect, 255, 0, 0);
 			insCheck[lineSelect][subStationCount] = FALSE;
-			enableInvalid = TRUE;
 		}
+		DrawFillRect(param, stationRect, 0, 255, 0);
+		DrawTrainNum(param, train, id);
 
 		if (stationCount == RAIL_NUM)	// 이동 종료
 		{
@@ -450,7 +490,9 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 				subStationCount = stationCount;
 				startInsCheck[lineSelect] = TRUE;
 				DrawFillRect(param, stationRect, 255, 0, 0);
+				DrawTrainNum(param, train, id);
 				Sleep(1000);
+				isCreate = FALSE;
 				stationCount++;
 			}
 			else if ((2 == flag || 4 == flag) && (trainHeight + trainSpeed + posY) == (stationRect.bottom - 10) && moveEnable)	// 상, 하
@@ -458,7 +500,9 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 				subStationCount = stationCount;
 				startInsCheck[lineSelect] = TRUE;
 				DrawFillRect(param, stationRect, 255, 0, 0);
+				DrawTrainNum(param, train, id);
 				Sleep(1000);
+				isCreate = FALSE;
 				stationCount++;
 			}
 
@@ -481,6 +525,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 				subStationCount = stationCount;
 				moveEnable = FALSE;
 				DrawFillRect(param, stationRect, 255, 0, 0);
+				DrawTrainNum(param, train, id);
 				Sleep(1000);
 				stationCount++;
 			}
@@ -503,8 +548,8 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 				subStationCount = stationCount;
 				moveEnable = FALSE;
 				DrawFillRect(param, stationRect, 255, 0, 0);
+				DrawTrainNum(param, train, id);
 				Sleep(1000);
-				OutputDebugStringW(_T("===================================================\n"));
 				stationCount++;
 			}
 		}
@@ -513,7 +558,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 			stationCount++;
 		}
 
-		stationCount == 2 ? startInsCheck[lineSelect] = FALSE : NULL;	// 초기 시작 충돌 방지
+		3 == stationCount ? startInsCheck[lineSelect] = FALSE : NULL;	// 초기 시작 충돌 방지
 	}
 	
 	dc.Detach();
@@ -630,7 +675,7 @@ UINT TestDrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnab
 		case 1:	//오른
 			moveEnable ? trainSpeed += 5 : Sleep(10);
 			rect = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
-			InvalidateRect(pArg->hwnd, rect, TRUE);
+			//InvalidateRect(pArg->hwnd, rect, TRUE);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case 2:	//아래
@@ -664,10 +709,14 @@ UINT TestDrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnab
 
 		CBrush brush;
 		CBrush* oldBrush = dc.SelectObject(&brush);
-
+		InvalidateRect(pArg->hwnd, rect, TRUE);
 		dc.SelectObject(oldBrush);
 		dc.Rectangle(rect);	//열차 그리기
+
+		CPen pen(PS_SOLID, 1, RGB(0, 0, 0));
+		CPen* oldpen = dc.SelectObject(&pen);
 		dc.DrawText(_T("1002"), rect, DT_NOCLIP | DT_CENTER);
+		dc.SelectObject(oldpen);
 
 		if (IntersectRect(tmpRect, rect, stationRect) && stationCount >= 0)
 		{
@@ -788,7 +837,7 @@ UINT ThreadMoveTrain(LPVOID param)
 	CTrain* pMain = (CTrain*)param;
 	ThreadArg* pArg = (ThreadArg*)param;
 	CBrush brush = RGB(255, 255, 255);
-	int errorCode = 10000;
+	UINT errorCode = 10000;
 	DWORD dwResult;
 
 	if (pArg->type > 0 && pArg->type < 5)
@@ -808,7 +857,9 @@ UINT ThreadMoveTrain(LPVOID param)
 
 	if (errorCode >= 1000 && errorCode < 10000)
 	{
-		::GetExitCodeThread(pMain->m_thread_move[(errorCode - 1000)], &dwResult);
+		errorCode -= 1000;
+		::GetExitCodeThread(pMain->m_thread_move[errorCode], &dwResult);
+		trainNum.RemoveAt(trainNum.Find(errorCode));
 		trainCount--;
 	}
 
