@@ -19,7 +19,6 @@ int soloRailTopLeft[LONG_RAIL_NUM] = { 860, 960, 1060, 1160, 1160, 1160, 1160, 1
 int soloRailTopRight[LONG_RAIL_NUM] = { 960, 1060, 1160, 1260, 1260, 1260, 1260, 1360, 1460, 1460, 1460, 1460, 1460, 1460, 1360, 1160, 960, 820, 820, 720 };
 int soloRailBottomLeft[LONG_RAIL_NUM] = { 210, 210, 210, 210, 260, 310, 360, 360, 360, 310, 260, 210, 160, 110, 110, 110, 110, 110, 60, 60 };
 int soloRailBottomRight[LONG_RAIL_NUM] = { 260, 260, 260, 260 , 310, 360, 410, 410, 410, 360, 310, 260, 210, 160, 160, 160, 160, 160, 110, 110 };
-
 //열차 구역 반복(one train NEED)
 int subRailTopLeft[SUB_RAIL_NUM] = { 760, 760, 760, 760, 860, 960 };
 int subRailTopRight[SUB_RAIL_NUM] = { 860, 860, 860, 860, 960, 1060 };
@@ -33,8 +32,10 @@ int newRailBottomRight[LONG_RAIL_NUM] = { 360, 360, 360, 360, 360, 310, 310, 410
 
 BOOL insCheck[SUM_RAIL_NUM][LONG_RAIL_NUM] = { FALSE, };  //주요 열차 확인용
 BOOL oneTrainInsCheck = FALSE;  //열차 구역 반복(one train NEED) Check
-BOOL startInsCheck[SUM_RAIL_NUM] = { FALSE, }; //시작값 체크
-BOOL joinTrain = FALSE;
+
+BOOL startInsCheck[SUM_RAIL_NUM][TRAIN_HAVE_NUM] = { FALSE, }; //각 선로에 있는 열차 체크(FALSE가 없는거, TRUE가 있는거)
+BOOL joinTrain[TRAIN_HAVE_NUM] = { FALSE, };  //1번 선로 열차 진입중인지 체크
+BOOL createAllCheck[SUM_RAIL_NUM] = { FALSE, };  //열차 생성 가능 체크(FALSE가 생성), startInsCheck에서 해당 선로가 깔끔한지 체크해주고 생성(1번 선로의 경우 들어오는 열차가 있는지도 체크)
 
 //열차 기본값
 int trainAreaFlag; //열차 몇번 선택했는지(선로)
@@ -47,7 +48,6 @@ CTrain::CTrain(CWnd* pParent /*=nullptr*/)
 	*arg1 = { NULL, };
 	hWndArg = { NULL, };
 	*m_thread_move = { NULL, };
-
 	*railInTrain = { 0, };
 }
 
@@ -80,11 +80,22 @@ void CTrain::OnBnClickedCreate()
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
 
-	trainAreaFlag = GetDlgItemInt(IDC_EDIT_LINE);
+	trainAreaFlag = GetDlgItemInt(IDC_EDIT_LINE);  //선로 받아오기
+	//초기값 FALSE 재지정
+	createAllCheck[(trainAreaFlag - 1)] = FALSE;
+	//열차가 비어있는지, 1번 선로의 경우 들어오는 열차가 있는지 체크하고 있다면 TRUE로 바꿔 생성 금지
+	for (int i = 0; i < TRAIN_HAVE_NUM; i++) {
+		if (startInsCheck[(trainAreaFlag - 1)][i] == TRUE || (joinTrain[i] == TRUE && trainAreaFlag == 1)) {
+			createAllCheck[(trainAreaFlag - 1)] = TRUE;
+			break;
+		}
+		if (i == TRAIN_HAVE_NUM) {
+			createAllCheck[(trainAreaFlag - 1)] = FALSE;
+		}
+	}
 
-	
-	//열차 개수가 최대치를 안넘었고, 열차 시작 가능한지, 1번 선로면 들어오는 열차 있는지 체크
-	if (railInTrain[(trainAreaFlag - 1)] < TRAIN_HAVE_NUM && startInsCheck[(trainAreaFlag - 1)] == FALSE && (joinTrain == FALSE || trainAreaFlag != 1)) {
+	//열차 개수가 최대치를 안넘었고, 열차 생성 가능한지 체크
+	if (railInTrain[(trainAreaFlag - 1)] < TRAIN_HAVE_NUM && createAllCheck[(trainAreaFlag - 1)] == FALSE) {
 		//for문을 통해 몇번째 열차 배치할지 체크
 		for (int i = 0; i < TRAIN_HAVE_NUM; i++) {
 			//해당 열차가 일하는게 아니라면
@@ -96,11 +107,11 @@ void CTrain::OnBnClickedCreate()
 				arg1[i].isThreadWork = TRUE;
 				arg1[i].isTrainMove = TRUE;
 				m_thread_move[i] = AfxBeginThread(ThreadMoveTrain, &arg1[i], THREAD_PRIORITY_NORMAL, 0, 0);
+				//열차 개수 증가
 				railInTrain[(trainAreaFlag - 1)]++;
 				break;
 			}
 		}
-		
 	}
 }
 
@@ -127,7 +138,6 @@ void CTrain::OnBnClickedStop()
 			arg1[i].isTrainMove = FALSE;
 			m_thread_move[i]->SuspendThread();
 		}
-		
 	}
 }
 
@@ -139,22 +149,22 @@ void CTrain::OnPaint()
 	CPen* oldPen = dc.SelectObject(&myPen);
 	int arraySize = (sizeof(railBottomLeft) / sizeof(*railBottomLeft));
 	for (int i = 0; i < arraySize; i++) {
-		//역 만들기
+		//역 만들기(내선)
 		dc.Rectangle(railTopLeft[i], railBottomLeft[i], railTopRight[i], railBottomRight[i]);
 	}
 	arraySize = (sizeof(soloRailTopLeft) / sizeof(*soloRailTopLeft));
 	for (int i = 0; i < arraySize; i++) {
-		//역 만들기
+		//역 만들기(단일 장거리)
 		dc.Rectangle(soloRailTopLeft[i], soloRailBottomLeft[i], soloRailTopRight[i], soloRailBottomRight[i]);
 	}
 	arraySize = (sizeof(newRailTopLeft) / sizeof(*newRailTopLeft));
 	for (int i = 0; i < arraySize; i++) {
-		//역 만들기
+		//역 만들기(5호선)
 		dc.Rectangle(newRailTopLeft[i], newRailBottomLeft[i], newRailTopRight[i], newRailBottomRight[i]);
 	}
 	arraySize = (sizeof(subRailTopLeft) / sizeof(*subRailTopLeft));
 	for (int i = 0; i < arraySize; i++) {
-		//역 만들기
+		//역 만들기(반복선)
 		dc.Rectangle(subRailTopLeft[i], subRailBottomLeft[i], subRailTopRight[i], subRailBottomRight[i]);
 	}
 	dc.SelectObject(oldPen);
@@ -229,7 +239,6 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 	//열차 방향 조정자 1우, 2하, 3좌, 4상
 	int flag = 0;			//열차 방향
 	int flagChange;  //플래그 변환용
-	BOOL invalidateCheck;  //화면 무효화 체크용
 
 	int posX = 0;			//초기 x위치
 	int posY = 0;			//초기 y위치
@@ -247,6 +256,15 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 	CRect stationRect;		//현재역 영역
 	CRect subStationRect;	//이전역 영역
 	CRect safeStationRect;	//다음역 영역
+
+	startInsCheck[lineSelect][(numberId - 1000)] = TRUE;
+	//4,5번 같은 선로 공유
+	if (lineSelect == 3) {
+		startInsCheck[4][(numberId - 1000)] = TRUE;
+	}
+	else if (lineSelect == 4) {
+		startInsCheck[3][(numberId - 1000)] = TRUE;
+	}
 
 	//열차 초기값 설정
 	if (lineSelect == 0) {
@@ -298,6 +316,8 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		flag = 1;
 		trainSpeed = 10;  //열차 속도, 초기 열차 위치
 		posY = 320;
+		//5상행을 위한 trainY 기억
+		trainY = posY + trainHeight;
 		threadRailTopLeft = newRailTopLeft;
 		threadRailTopRight = newRailTopRight;
 		threadRailBottomLeft = newRailBottomLeft;
@@ -312,8 +332,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 	while (1) {
 		Sleep(10);  //기본 대기
 		flagChange = 0; //플래그 조정자 초기화
-		invalidateCheck = FALSE; //화면 무효화 초기화
-		//열차 속도 설정(safe okay)
+		//열차 속도 설정(safe okay) or 3line
 		if (insCheck[lineSelect][safeStationCount] == FALSE  || lineSelect == 2) {
 			//오른(1), 아래(2) 플래그
 			if (flag <= 2) {
@@ -329,6 +348,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 			//오른
 			trainRect = CRect(trainSpeed, posY, trainSpeed + trainWidth, posY + trainHeight);
 			trainX = trainSpeed + trainWidth;
+			
 		}
 		else if (flag == 2) {
 			//아래
@@ -345,7 +365,6 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 			trainRect = CRect(trainX - trainWidth, posY + trainSpeed, trainX, posY + trainHeight + trainSpeed);
 			trainY = trainSpeed + trainHeight;
 		}
-
 		//NULL이 아닐때만, NULL 포인터 역참조 방지
 		if (threadRailTopLeft != NULL && threadRailBottomLeft != NULL && threadRailTopRight != NULL && threadRailBottomRight != NULL) {
 			stationRect = CRect(threadRailTopLeft[stationCount], threadRailBottomLeft[stationCount], threadRailTopRight[stationCount], threadRailBottomRight[stationCount]);
@@ -357,19 +376,22 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		IntersectRect(tmpRect, trainRect, stationRect) && stationCount >= 0 && lineSelect != 2 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
 		if (IntersectRect(tmpRect, trainRect, stationRect) && stationCount >= 0)
 		{
+			//열차가 이전역과 닿아있으면 해당역 FASLE 처리
+
 			//색칠 + 무효화
 			//역 초록색
 			RectPaint(param, 0, 200, 0, stationRect);
 			//이전역 부분과 충돌이 있을경우에만 무효화 해주기
-			if (!insCheck[lineSelect][subStationCount] && (stationCount >= 1 || lineWhile == FALSE)) {
+			if (IntersectRect(tmpRect, &trainRect, subStationRect) && (stationCount >= 1 || lineWhile == FALSE)) {
 				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
+				insCheck[lineSelect][subStationCount] = FALSE;
 			}
 		}
 		else if (IntersectRect(tmpRect, &trainRect, subStationRect) && subStationCount >= 0)
 		{
 			//역 빨강색
 			RectPaint(param, 200, 0, 0, subStationRect);
-			insCheck[lineSelect][subStationCount] = FALSE;
+			
 		}
 		//열차 색상 지정
 		RectPaint(param, colorR, colorG, colorB, trainRect);
@@ -383,24 +405,15 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		//생성 후 이동
 		if (stationCount == 0)
 		{
-			startInsCheck[lineSelect] = TRUE;
-			//4,5번 같은 선로 공유
-			if (lineSelect == 3) {
-				startInsCheck[4] = TRUE;
-			}
-			else if (lineSelect == 4) {
-				startInsCheck[3] = TRUE;
-			}
 			if ((1 == flag || 3 == flag) && (lineRangeX + trainSpeed) == threadRailTopRight[stationCount])
 			{
-				
 				subStationCount = stationCount;
 				Sleep(500);
 				stationCount++;
 				safeStationCount = stationCount + 1;
 				//1번 선로의 경우 열차 진입 허용
 				if (lineSelect == 0) {
-					joinTrain = FALSE;
+					joinTrain[(numberId - 1000)] = FALSE;
 				}
 			}
 			else if ((2 == flag || 4 == flag) && (trainHeight + trainSpeed) == threadRailBottomRight[stationCount] - 10)
@@ -445,14 +458,8 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 				if (lineSelect == 0) {
 					if (stationCount == 13) {
 						//내선 초기값 지정
-						startInsCheck[lineSelect] = TRUE;
+						startInsCheck[lineSelect][(numberId - 1000)] = TRUE;
 						insCheck[lineSelect][subStationCount] = FALSE;
-
-
-						CString testNumber;
-						testNumber.Format(L"%d", trainRect.right);
-						OutputDebugStringW(testNumber + " 구역내 열차 갯수, 현재 구역\n");
-
 						flag = 1;
 						stationCount = 0;
 						safeStationCount = 1;
@@ -505,19 +512,12 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 						//선로 아래로 바꾸기
 						flagChange = 2;
 					}
-					//(상행) 열차 올려주기
-					else if (lineSelect == 4 && stationCount == 5) {
-						//4번 위치 초기화용
-						insCheck[lineSelect][subStationCount] = FALSE;
-						//trainY default -> controll (trainY 쓰레기값인데 flagChange에 사용 가능하게 바꾸기)
-						trainY = stationRect.top + trainHeight;
-					}
 				}
 				Sleep(500);  //역 도착시 정차
 			}
 			
 		}
-
+		
 		//열차 방향 조정값 1오른, 2아래, 3왼, 4위
 		switch (flagChange)
 		{
@@ -545,42 +545,35 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 
 		//차고지행 확인(최대 선로 == 현재 선로)
 		if (arraySize == stationCount) {
-			invalidateCheck = TRUE;
-		}
-		//차고지행 확정
-		if (invalidateCheck == TRUE) {
-			insCheck[lineSelect][subStationCount] = FALSE;
-			InvalidateRect(pArg->hwnd, stationRect, TRUE);
-			UpdateWindow(pArg->hwnd);
-			//연결 해제
-			dc.Detach();
-			::ReleaseDC(pArg->hwnd, hdc);
-			return numberId;
 			break;
 		}
-
+		
 		//1번 선로 열차 들어오는거 확인
 		if (lineSelect == 0) {
-			if (stationCount >= 11) {
+			if (stationCount >= 10) {
 				//열차 들어오는중
-				startInsCheck[lineSelect] = TRUE;
-				joinTrain = TRUE;
+				startInsCheck[lineSelect][(numberId - 1000)] = TRUE;
+				joinTrain[(numberId - 1000)] = TRUE;
 			}
 		}
 
 		//나는 처음에있고, 다른열차가 2번에 있는데 열차 생성하면 겹쳐나오는 오류있음
 		//열차 생성시 구역에 열차 있으면 막아주기(안전 거리)
 		if (stationCount == 2 && insCheck[lineSelect][0] == FALSE) {
-			startInsCheck[lineSelect] = FALSE;
+			startInsCheck[lineSelect][(numberId - 1000)] = FALSE;
 			//4,5번 같은 선로 공유
 			if (lineSelect == 3 && insCheck[4][0] == FALSE) {
-				startInsCheck[4] = FALSE;
+				startInsCheck[4][(numberId - 1000)] = FALSE;
 			}
 			else if (lineSelect == 4 && insCheck[3][0] == FALSE) {
-				startInsCheck[3] = FALSE;
+				startInsCheck[3][(numberId - 1000)] = FALSE;
 			}
 		}
 	}
+	//차고지행
+	insCheck[lineSelect][subStationCount] = FALSE;
+	InvalidateRect(pArg->hwnd, stationRect, TRUE);
+	UpdateWindow(pArg->hwnd);
 	//연결 해제
 	dc.Detach();
 	::ReleaseDC(pArg->hwnd, hdc);
