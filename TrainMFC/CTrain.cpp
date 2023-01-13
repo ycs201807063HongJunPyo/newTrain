@@ -26,15 +26,12 @@ int thirdRailBottom[RAIL_NUM] = { 270, 270, 270, 270 };
 BOOL insCheck[LINE_NUM][RAIL_NUM] = { FALSE };	//역에 열차가 있는지 확인
 BOOL startInsCheck[LINE_NUM] = { FALSE };		//시작역에 열차가 있는지 확인
 
-//겹치는 구역
-BOOL rectResult;
-CRect testRect;
-
 CString lineEditText = _T("");	//이전 선로 번호
 UINT trainCount;				//열차 개수
 CList<UINT, UINT&> trainNum;	//열차 번호
-BOOL isCreate;				//열차 생성 가능
+BOOL isCreate;					//열차 생성 가능
 
+CString txtStr;	//Test String
 
 CTrain::CTrain(CWnd* pParent /*=nullptr*/)
 	: CDialog(IDD_MAINTRAIN, pParent)
@@ -53,6 +50,9 @@ void CTrain::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
 	GetDlgItem(IDC_CheckCir)->SetWindowTextW(_T("순환 가능"));
+	GetDlgItem(IDC_STATIC1)->SetWindowTextW(_T("선로 번호"));
+	GetDlgItem(IDC_STATIC2)->SetWindowTextW(_T("왕복 횟수"));
+	GetDlgItem(IDC_STATIC)->SetWindowTextW(_T("열차 번호"));
 }
 
 
@@ -96,8 +96,7 @@ void CTrain::OnPaint()
 void CTrain::OnBnClickedCreate()
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
-	if (isCreate) return;
-	
+	if (isCreate) return;	
 
 	CString tmpStr = _T("");
 
@@ -111,6 +110,7 @@ void CTrain::OnBnClickedCreate()
 	arg1.type = numLine;
 	arg1.cycleCount = numCirCount;
 	arg1.checkCycleEnable = checkCirEnable;
+	arg1.move = TRUE;
 	while (TRUE)
 	{
 		if (trainCount < THREAD_NUM)
@@ -138,26 +138,66 @@ void CTrain::OnBnClickedCreate()
 
 void CTrain::OnBnClickedStart()
 {
-	for (int i = 0; i < THREAD_NUM; i++)
+	int suspendCount = 0;
+	CString tmpStr;
+	UINT m_trainNum;
+
+	GetDlgItemText(IDC_EDIT_CONTROL, tmpStr);
+
+	if ("" == tmpStr || "0" == tmpStr)
 	{
-		if (m_thread_move[i] != NULL)
+		for (int i = 0; i < THREAD_NUM; i++)
 		{
-			m_thread_move[i]->ResumeThread();
+			if (m_thread_move[i] != NULL)
+			{
+				do
+				{
+					suspendCount = m_thread_move[i]->ResumeThread();
+				} while (suspendCount > 0);
+			}
 		}
+		GetDlgItem(IDSTART)->EnableWindow(FALSE);
+		GetDlgItem(IDSTOP)->EnableWindow(TRUE);
+	}
+	else
+	{
+		m_trainNum = _wtoi(tmpStr);
+
+		do
+		{
+			suspendCount = m_thread_move[(m_trainNum - 1000)]->ResumeThread();
+		} while (suspendCount > 0);
+		
+		GetDlgItem(IDSTOP)->EnableWindow(TRUE);
 	}
 }
 
 void CTrain::OnBnClickedStop()
 {
-	CString tmp;
-	for (int i = 0; i < THREAD_NUM; i++)
+	CString tmpStr;
+	UINT m_trainNum;
+	DWORD dwResult;
+
+	GetDlgItemText(IDC_EDIT_CONTROL, tmpStr);
+
+	if ("" == tmpStr || "0" == tmpStr)
 	{
-		if (m_thread_move[i] != NULL)
+		for (int i = 0; i < THREAD_NUM; i++)
 		{
-			tmp.Format(_T("%d\n"), i);
-			OutputDebugStringW(tmp);
-			m_thread_move[i]->SuspendThread();
+			if (NULL != m_thread_move[i])
+			{
+				m_thread_move[i]->SuspendThread();
+				
+			}
 		}
+		GetDlgItem(IDSTOP)->EnableWindow(FALSE);
+		GetDlgItem(IDSTART)->EnableWindow(TRUE);
+	}
+	else
+	{
+		m_trainNum = _wtoi(tmpStr);
+		m_thread_move[(m_trainNum - 1000)]->SuspendThread();
+		GetDlgItem(IDSTART)->EnableWindow(TRUE);
 	}
 }
 
@@ -180,7 +220,7 @@ void DrawFillRect(LPVOID param, CRect fillRect, int r, int g, int b)
 
 	dc.Attach(hdc);
 
-	//현재 영역 칠하기
+	//영역 칠하기
 	brush.CreateSolidBrush(RGB(r, g, b));
 	oldBrush = dc.SelectObject(&brush);
 	dc.Rectangle(fillRect);
@@ -200,6 +240,7 @@ void DrawTrainNum(LPVOID param, CRect train, UINT id)
 	CPen pen(PS_SOLID, 1, RGB(0, 0, 0));
 	CPen* oldpen;
 
+	//열차 번호 표시
 	dc.Attach(hdc);
 	oldpen = dc.SelectObject(&pen);
 	dc.Rectangle(train);
@@ -858,9 +899,10 @@ UINT ThreadMoveTrain(LPVOID param)
 	if (errorCode >= 1000 && errorCode < 10000)
 	{
 		errorCode -= 1000;
-		::GetExitCodeThread(pMain->m_thread_move[errorCode], &dwResult);
+		::GetExitCodeThread(pMain->m_thread_move[errorCode]->m_hThread, &dwResult);
+		pMain->m_thread_move[errorCode]->m_bAutoDelete;
 		trainNum.RemoveAt(trainNum.Find(errorCode));
-		trainCount--;
+		trainCount = 0;
 	}
 
 	return 0;

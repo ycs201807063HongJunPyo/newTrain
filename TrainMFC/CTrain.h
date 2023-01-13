@@ -12,6 +12,7 @@ struct ThreadArg
 	UINT cycleCount;		// 순환 횟수
 	BOOL checkCycleEnable;	// 순환 여부
 	UINT id;				// 스레드 번호
+	BOOL move;				// 이동 가능
 };
 
 struct HwndArg
