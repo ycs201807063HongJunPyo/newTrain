@@ -15,7 +15,7 @@ int railTopRight[RAIL_NUM] = { 110,210,310,410,510,510,510,410,310,210,110,110,1
 int railBottomLeft[RAIL_NUM] = { 10,10,10,10,10,60,110,110,110,110,110,60,10 };
 int railBottomRight[RAIL_NUM] = { 60,60,60,60,60,110,160,160,160,160,160,110,60 };
 //열차 구역 1회
-int soloRailTopLeft[LONG_RAIL_NUM] = { 860, 960, 1060, 1160, 1160, 1160, 1160, 1260, 1360, 1360, 1360, 1360, 1360, 1360, 1160, 960, 820, 720, 720, 620};
+int soloRailTopLeft[LONG_RAIL_NUM] = { 860, 960, 1060, 1160, 1160, 1160, 1160, 1260, 1360, 1360, 1360, 1360, 1360, 1360, 1160, 960, 820, 720, 720, 620 };
 int soloRailTopRight[LONG_RAIL_NUM] = { 960, 1060, 1160, 1260, 1260, 1260, 1260, 1360, 1460, 1460, 1460, 1460, 1460, 1460, 1360, 1160, 960, 820, 820, 720 };
 int soloRailBottomLeft[LONG_RAIL_NUM] = { 210, 210, 210, 210, 260, 310, 360, 360, 360, 310, 260, 210, 160, 110, 110, 110, 110, 110, 60, 60 };
 int soloRailBottomRight[LONG_RAIL_NUM] = { 260, 260, 260, 260 , 310, 360, 410, 410, 410, 360, 310, 260, 210, 160, 160, 160, 160, 160, 110, 110 };
@@ -66,6 +66,7 @@ void CTrain::DoDataExchange(CDataExchange* pDX)
 	CDialog::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_STATIC_HINT, hintText);
 	hintText.GetWindowTextW(infoStr);
+	DDX_Control(pDX, IDC_COMBO_TRAINNUMBER, trainComboList);
 }
 
 BEGIN_MESSAGE_MAP(CTrain, CDialog)
@@ -88,7 +89,11 @@ BOOL CTrain::OnInitDialog()
 	//화면 크기 강제 조절
 	MoveWindow(100, 100, 1500, 700);
 	// TODO:  여기에 추가 초기화 작업을 추가합니다.
-
+	trainComboList.AddString(_T("1"));
+	trainComboList.AddString(_T("2"));
+	trainComboList.AddString(_T("3"));
+	trainComboList.AddString(_T("4"));
+	trainComboList.AddString(_T("5"));
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
 }
@@ -97,7 +102,7 @@ void CTrain::OnBnClickedCreate()
 {
 
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
-	trainAreaFlag = GetDlgItemInt(IDC_EDIT_LINE);  //선로 받아오기
+	trainAreaFlag = trainComboList.GetCurSel()+1;  //선로 받아오기
 	//초기값 FALSE 재지정
 	createAllCheck[(trainAreaFlag - 1)] = FALSE;
 	//열차가 비어있는지, 1번 선로의 경우 들어오는 열차가 있는지 체크하고 있다면 TRUE로 바꿔 생성 금지
@@ -127,6 +132,9 @@ void CTrain::OnBnClickedCreate()
 				//열차 개수 증가
 				railInTrain[(trainAreaFlag - 1)]++;
 				curTrainCount++;
+				//열차 갯수 텍스트 바로 보이게 하기
+				InvalidateRect(CRect(150, 450, 350, 550), TRUE);
+
 				break;
 			}
 		}
@@ -249,7 +257,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 	int colorB = 0;
 	//train nicknumber
 	CString trainNumberStr;
-	trainNumberStr.Format(L"%d", (1 + lineSelect) * 10 + numberId-1000);
+	trainNumberStr.Format(L"%d", (1 + lineSelect) * 10 + numberId - 1000);
 	LPCTSTR trainNumber = trainNumberStr;
 
 	int trainX;  //x기억
@@ -354,7 +362,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		Sleep(20);  //기본 대기
 		flagChange = 0; //플래그 조정자 초기화
 		//열차 속도 설정(safe okay) or 3line
-		if (insCheck[lineSelect][safeStationCount] == FALSE ) {
+		if (insCheck[lineSelect][safeStationCount] == FALSE) {
 			//오른(1), 아래(2) 플래그
 			if (flag <= 2) {
 				trainSpeed += 10;
@@ -394,7 +402,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		else {
 			break;  //만약 선로가 1개라도 NULL 이면 탈출
 		}
-		
+
 		//반복구간이 아니고 겹쳐있다면 현재 위치에 열차 있다고 표시
 		IntersectRect(tmpRect, trainRect, stationRect) && stationCount >= 0 && lineSelect != 2 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
 		if (IntersectRect(tmpRect, trainRect, stationRect) && stationCount >= 0)
@@ -419,7 +427,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 				RectPaint(param, 200, 0, 0, subStationRect);
 			}
 		}
-		
+
 		//열차 색상 지정
 		RectPaint(param, colorR, colorG, colorB, trainRect);
 		//열차 번호
@@ -427,7 +435,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		//화면 업데이트로 번호 보이기
 		UpdateWindow(pArg->hwnd);
 		//정차, 방향 조정하기(NULL 포인터 역참조 방지
-		threadRailTopRight!=NULL ? lineRangeX = (threadRailTopRight[stationCount] - threadRailTopLeft[stationCount]) / 2 : NULL;
+		threadRailTopRight != NULL ? lineRangeX = (threadRailTopRight[stationCount] - threadRailTopLeft[stationCount]) / 2 : NULL;
 		///선로 이동 방향
 		//생성 후 이동
 		if (stationCount == 0)
@@ -530,7 +538,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 				subStationCount = stationCount;
 				lineWhile == TRUE ? stationCount++ : stationCount--;
 				lineWhile == TRUE ? safeStationCount = stationCount + 1 : safeStationCount = stationCount - 1;
-				
+
 				//5호선 선로 조정자
 				if (lineSelect == 3 || lineSelect == 4) {
 					//(하행) 열차 아래로 밀어주기
@@ -544,7 +552,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 				Sleep(500);  //역 도착시 정차
 			}
 		}
-		
+
 		//열차 방향 조정값 1오른, 2아래, 3왼, 4위
 		switch (flagChange)
 		{
@@ -555,7 +563,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 			break;
 		case 2:
 			flag = 2;
-			trainSpeed = stationRect.top+10;
+			trainSpeed = stationRect.top + 10;
 			break;
 		case 3:
 			flag = 3;
@@ -574,7 +582,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 		if (arraySize == stationCount) {
 			break;
 		}
-		
+
 		//1번 선로 열차 들어오는거 확인
 		if (lineSelect == 0) {
 			if (stationCount >= 10) {
@@ -582,7 +590,6 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 				joinTrain[(numberId - 1000)] = TRUE;
 			}
 		}
-
 		//열차 안전거리 지정
 		if (stationCount == 2) {
 			//선로에 몇번째 열차가 안전한 거리에 있는지 체크
@@ -615,7 +622,7 @@ UINT ThreadMoveTrain(LPVOID param)
 	{
 	case 1:
 		//1번 라인 최대 열차 제한
-		if (railInTrain[(pArg->type-1)] > 5) {
+		if (railInTrain[(pArg->type - 1)] > 5) {
 			errorCode = 666;
 		}
 		else {
@@ -624,6 +631,7 @@ UINT ThreadMoveTrain(LPVOID param)
 		break;
 	case 2:
 		errorCode = DrawObject(pMain, pArg->type, pArg->numberId);
+		railInTrain[(pArg->type - 1)]--;
 		break;
 	case 3:
 		//3번 라인 최대 열차 제한
@@ -636,29 +644,26 @@ UINT ThreadMoveTrain(LPVOID param)
 		break;
 	case 4:
 		errorCode = DrawObject(pMain, pArg->type, pArg->numberId);
+		railInTrain[(pArg->type - 1)]--;
 		break;
 	case 5:
 		errorCode = DrawObject(pMain, pArg->type, pArg->numberId);
+		railInTrain[(pArg->type - 1)]--;
 		break;
 	default:
 		errorCode = 666;
 		OutputDebugStringW(_T("\r\nCTrain >> ThreadMoveTrain >> Out of ThreadArg.type Range\r\n"));
 		break;
 	}
-	if (errorCode == 666) {
-		OutputDebugStringW(_T("dont create\n"));
+	if (errorCode >= 666) {
+		OutputDebugStringW(_T("Thread Out\n"));
 		pArg->isThreadWork = FALSE;
 		pArg->isTrainMove = FALSE;
-		railInTrain[(pArg->type - 1)]--;
+		
 		curTrainCount--;
-	}
-	else if (errorCode >= 1000) {
-		OutputDebugStringW(_T("end train\n"));
-		pArg->isThreadWork = FALSE;
-		pArg->isTrainMove = FALSE;
-		railInTrain[(pArg->type - 1)]--;
-		curTrainCount--;
-		::WaitForSingleObject(pMain->m_thread_move[(errorCode - 1000)], INFINITE);
+		if (errorCode >= 1000) {
+			::WaitForSingleObject(pMain->m_thread_move[(errorCode - 1000)], INFINITE);
+		}
 	}
 	return 0;
 }
@@ -674,6 +679,12 @@ HBRUSH CTrain::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 	//text color change
 	if (pWnd->GetDlgCtrlID() == IDC_STATIC_HINT) {
 		pDC->SetTextColor(RGB(255, 255, 255));  //글자색 흰
+	}
+	//콤보박스 색상
+	if (nCtlColor == CTLCOLOR_LISTBOX)
+	{
+		pDC->SetTextColor(RGB(255, 255, 255));
+		pDC->SetBkColor(RGB(0, 0, 0));
 	}
 	hbr = (HBRUSH)GetStockObject(NULL_BRUSH);
 	return hbr;

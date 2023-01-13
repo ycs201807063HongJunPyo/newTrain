@@ -47,7 +47,7 @@ public:
 	afx_msg void OnBnClickedCreate();
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedStop();
-	
+
 	CWinThread* m_thread_move[TRAIN_HAVE_NUM];  //열차 쓰레드
 	ThreadArg arg1[TRAIN_HAVE_NUM];
 
@@ -57,4 +57,5 @@ public:
 	//글자 색, 글자 배경
 	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
 	CStatic hintText;
+	CComboBox trainComboList;
 };
