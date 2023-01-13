@@ -12,6 +12,7 @@ IMPLEMENT_DYNAMIC(CTrain, CDialog)
 
 //열차 구역
 int firstRailLeft[RAIL_NUM] = { 10, 110, 190, 280, 400, 520, 700, 820, 920, 1080, 1400 };
+int firstRailRight[RAIL_NUM] = {110, 190, 280, 400, 520, 700, 820, 920, 1080, 1400, 1480 };
 
 int secondRailLeft[RAIL_NUM] = { 10, 10, 110, 110, 110, 10, 10, 10, 110, 220, 220, 220, 220, 220, 220, 120 };
 int secondRailTop[RAIL_NUM] = { 170, 220, 220, 270, 320, 320, 370, 420, 420, 420, 380, 320, 270, 210, 160, 160 };
@@ -33,17 +34,33 @@ BOOL isCreate;					//열차 생성 가능
 
 CString txtStr;	//Test String
 
+UINT ThreadMoveTrain(LPVOID param);
+UINT ThreadLineCheck(LPVOID param);
+
 CTrain::CTrain(CWnd* pParent /*=nullptr*/)
 	: CDialog(IDD_MAINTRAIN, pParent)
 {
 	trainCount = 0;
 	arg1 = { NULL };
-	hWndArg = { NULL };
 	*m_thread_move = { NULL };
+	arg2 = { NULL };
+	*m_thread_lineCheck = { NULL };
+	hWndArg = { NULL };
 }
 
 CTrain::~CTrain()
 {
+}
+
+BOOL CTrain::OnInitDialog()
+{
+	CDialog::OnInitDialog();
+
+	// TODO:  여기에 추가 초기화 작업을 추가합니다.
+	MoveWindow(100, 100, 1600, 700);
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+	// 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
 }
 
 void CTrain::DoDataExchange(CDataExchange* pDX)
@@ -68,7 +85,6 @@ END_MESSAGE_MAP()
 
 
 // CTrain 메시지 처리기
-UINT ThreadMoveTrain(LPVOID param);
 
 void CTrain::OnPaint()
 {
@@ -77,13 +93,13 @@ void CTrain::OnPaint()
 	//역 테두리 설정
 	CPen myPen(PS_SOLID, 1, RGB(0, 0, 0));
 	CPen* oldPen = dc.SelectObject(&myPen);
-	int arraySize = (sizeof(firstRailLeft) / sizeof(*firstRailLeft)) / 2;
+	int arraySize = (sizeof(firstRailLeft) / sizeof(*firstRailLeft)) / 2 + 1;
 
 	//역 만들기
 	for (int i = 0; i < arraySize; i++)
 	{
-		dc.Rectangle(CRect(firstRailLeft[i], 10, firstRailLeft[i + 1], 30));
-		dc.Rectangle(CRect(firstRailLeft[i], 40, firstRailLeft[i + 1], 60));
+		dc.Rectangle(CRect(firstRailLeft[i], 10, firstRailRight[i], 30));
+		dc.Rectangle(CRect(firstRailLeft[i], 40, firstRailRight[i], 60));
 	}
 	for (int i = 0; i < RAIL_NUM; i++) {
 		dc.Rectangle(secondRailLeft[i], secondRailTop[i], secondRailRight[i], secondRailBottom[i]);
@@ -91,6 +107,16 @@ void CTrain::OnPaint()
 	}
 
 	dc.SelectObject(oldPen);
+
+	for (int i = 0; i < LINE_NUM; i++)
+	{
+		if (NULL == m_thread_lineCheck[i])
+		{
+			arg2.hwnd = this->m_hWnd;
+			arg2.type = i;
+			m_thread_lineCheck[i] = AfxBeginThread(ThreadLineCheck, &arg2, THREAD_PRIORITY_NORMAL, 0, 0);
+		}
+	}
 }
 
 void CTrain::OnBnClickedCreate()
@@ -138,13 +164,13 @@ void CTrain::OnBnClickedCreate()
 
 void CTrain::OnBnClickedStart()
 {
-	int suspendCount = 0;
-	CString tmpStr;
+	int suspendCount = 0;	//일시중지 횟수
+	CString editText;
 	UINT m_trainNum;
 
-	GetDlgItemText(IDC_EDIT_CONTROL, tmpStr);
+	GetDlgItemText(IDC_EDIT_CONTROL, editText);
 
-	if ("" == tmpStr || "0" == tmpStr)
+	if ("" == editText || "0" == editText)
 	{
 		for (int i = 0; i < THREAD_NUM; i++)
 		{
@@ -161,7 +187,7 @@ void CTrain::OnBnClickedStart()
 	}
 	else
 	{
-		m_trainNum = _wtoi(tmpStr);
+		m_trainNum = _wtoi(editText);
 
 		do
 		{
@@ -174,13 +200,12 @@ void CTrain::OnBnClickedStart()
 
 void CTrain::OnBnClickedStop()
 {
-	CString tmpStr;
+	CString editText;
 	UINT m_trainNum;
-	DWORD dwResult;
 
-	GetDlgItemText(IDC_EDIT_CONTROL, tmpStr);
+	GetDlgItemText(IDC_EDIT_CONTROL, editText);
 
-	if ("" == tmpStr || "0" == tmpStr)
+	if ("" == editText || "0" == editText)
 	{
 		for (int i = 0; i < THREAD_NUM; i++)
 		{
@@ -195,7 +220,7 @@ void CTrain::OnBnClickedStop()
 	}
 	else
 	{
-		m_trainNum = _wtoi(tmpStr);
+		m_trainNum = _wtoi(editText);
 		m_thread_move[(m_trainNum - 1000)]->SuspendThread();
 		GetDlgItem(IDSTART)->EnableWindow(TRUE);
 	}
@@ -305,12 +330,12 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 	switch (type)	//선로 선택
 	{
 	case 1:
-		arraySize = (sizeof(firstRailLeft) / sizeof(*firstRailLeft)) / 2;
+		arraySize = (sizeof(firstRailLeft) / sizeof(*firstRailLeft)) / 2 + 1;
 		for (int i = 0; i < arraySize; i++)
 		{
 			TrailLeft[i] = firstRailLeft[i];
 			TrailTop[i] = 10;
-			TrailRight[i] = firstRailLeft[i + 1];
+			TrailRight[i] = firstRailRight[i];
 			TrailBottom[i] = 30;
 			count = i;
 		}
@@ -402,7 +427,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 	}
 
 	dc.Attach(hdc);
-
+	
 	while (TRUE) {
 		Sleep(10);	//이동 딜레이
 
@@ -478,11 +503,9 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 			break;
 		}
 
-//		InvalidateRect(pArg->hwnd, train, TRUE);
 		stationRect = CRect(TrailLeft[stationCount], TrailTop[stationCount], TrailRight[stationCount], TrailBottom[stationCount]);
 		subStationRect = CRect(TrailLeft[subStationCount], TrailTop[subStationCount], TrailRight[subStationCount], TrailBottom[subStationCount]);
 		IntersectRect(tmpRect, train, stationRect) && stationCount >= 0 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
-//		dc.Rectangle(train);	//열차 그리기
 		
 		if (IntersectRect(tmpRect, train, stationRect) && stationCount >= 0)
 		{
@@ -530,7 +553,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 			{
 				subStationCount = stationCount;
 				startInsCheck[lineSelect] = TRUE;
-				DrawFillRect(param, stationRect, 255, 0, 0);
+				DrawFillRect(param, stationRect, 0, 255, 0);
 				DrawTrainNum(param, train, id);
 				Sleep(1000);
 				isCreate = FALSE;
@@ -540,7 +563,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 			{
 				subStationCount = stationCount;
 				startInsCheck[lineSelect] = TRUE;
-				DrawFillRect(param, stationRect, 255, 0, 0);
+				DrawFillRect(param, stationRect, 0, 255, 0);
 				DrawTrainNum(param, train, id);
 				Sleep(1000);
 				isCreate = FALSE;
@@ -899,12 +922,70 @@ UINT ThreadMoveTrain(LPVOID param)
 	if (errorCode >= 1000 && errorCode < 10000)
 	{
 		errorCode -= 1000;
-		::GetExitCodeThread(pMain->m_thread_move[errorCode]->m_hThread, &dwResult);
+		::GetExitCodeThread(pMain->m_thread_move[errorCode], &dwResult);
 		pMain->m_thread_move[errorCode]->m_bAutoDelete;
 		trainNum.RemoveAt(trainNum.Find(errorCode));
 		trainCount = 0;
 	}
 
+	return 0;
+}
+
+UINT ThreadLineCheck(LPVOID param)
+{
+	HwndArg* pArg = (HwndArg*)param;
+	ThreadArg* tArg = (ThreadArg*)param;
+	CDC dc;
+	HDC hdc = ::GetDC(pArg->hwnd);
+	CBrush brush(RGB(0, 0, 255));
+	CBrush* oldBrush;
+	CRect line[LINE_NUM][RAIL_NUM];
+
+	dc.Attach(hdc);
+	oldBrush = dc.SelectObject(&brush);
+
+	//라인 정의
+	switch (tArg->type)
+	{
+	case 0:
+		for (int i = 0; i < RAIL_NUM; i++)
+		{
+			line[0][i] = CRect(firstRailLeft[i], 10, firstRailRight[i], 30);
+			line[1][i] = CRect(firstRailLeft[i], 40, firstRailRight[i], 60);
+		}
+		break;
+	case 1:
+		for (int i = 0; i < RAIL_NUM; i++)
+		{
+			line[2][i] = CRect(secondRailLeft[i], secondRailTop[i], secondRailRight[i], secondRailBottom[i]);
+		}
+		break;
+	case 2:
+		for (int i = 0; i < RAIL_NUM; i++)
+		{
+			line[3][i] = CRect(thirdRailLeft[i], thirdRailTop[i], thirdRailRight[i], thirdRailBottom[i]);
+		}
+		break;
+	case 3:
+		for (int i = 0; i < RAIL_NUM; i++)
+		{
+			if (i <= 13)
+			{
+				line[4][i] = CRect(secondRailLeft[i], secondRailTop[i], secondRailRight[i], secondRailBottom[i]);
+			}
+			else
+			{
+				line[4][i] = CRect(thirdRailLeft[i - 14], thirdRailTop[i - 14], thirdRailRight[i - 14], thirdRailBottom[i - 14]);
+			}
+		}
+		break;
+	default:
+		return 2;
+		break;
+	}
+	
+	dc.Detach();
+	::ReleaseDC(pArg->hwnd, hdc);
 	return 0;
 }
 

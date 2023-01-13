@@ -45,10 +45,12 @@ public:
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedStop();
 
-	CWinThread* m_thread_move[THREAD_NUM];  //열차 쓰레드
-	ThreadArg arg1;
+	CWinThread* m_thread_move[THREAD_NUM];		//열차 쓰레드
+	CWinThread* m_thread_lineCheck[LINE_NUM];	//선로 색상 결정
+	ThreadArg arg1, arg2;
 	HwndArg hWndArg;
 
 	afx_msg void OnPaint();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+	virtual BOOL OnInitDialog();
 };
