@@ -3,7 +3,7 @@
 
 #define THREAD_NUM 6	// 스레드 개수
 #define RAIL_NUM 20		// 레일 개수
-#define LINE_NUM 10		// 선로 개수
+#define LINE_NUM 4		// 선로 개수
 
 struct ThreadArg
 {
@@ -45,9 +45,8 @@ public:
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedStop();
 
-	CWinThread* m_thread_move[THREAD_NUM];		//열차 쓰레드
-	ThreadArg arg1;
-	HwndArg hWndArg;
+	ThreadArg m_arg;
+	HwndArg m_hWndArg;
 
 	afx_msg void OnPaint();
 	virtual BOOL OnInitDialog();

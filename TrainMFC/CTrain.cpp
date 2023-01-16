@@ -10,6 +10,8 @@
 
 IMPLEMENT_DYNAMIC(CTrain, CDialog)
 
+CWinThread* m_thread_move[THREAD_NUM];		//열차 스레드
+
 //열차 구역
 int firstNonRevRailLeft[RAIL_NUM] = { 10, 110, 190, 280, 400, 520, 700, 820, 920, 1080, 1400 };
 int firstNonRevRailTop = 10;
@@ -47,9 +49,9 @@ CTrain::CTrain(CWnd* pParent /*=nullptr*/)
 	: CDialog(IDD_MAINTRAIN, pParent)
 {
 	trainCount = 0;
-	arg1 = { NULL };
+	m_arg = { NULL };
 	*m_thread_move = { NULL };
-	hWndArg = { NULL };
+	m_hWndArg = { NULL };
 }
 
 CTrain::~CTrain()
@@ -95,7 +97,6 @@ void CTrain::OnPaint()
 	//역 테두리 설정
 	CPen myPen(PS_SOLID, 1, RGB(0, 0, 0));
 	CPen* oldPen = dc.SelectObject(&myPen);
-	CString tmp;
 
 	//역 만들기
 	for (int i = 0; i < RAIL_NUM; i++) {
@@ -111,21 +112,28 @@ void CTrain::OnPaint()
 void CTrain::OnBnClickedCreate()
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
-	if (isCreate) return;	
+	if (isCreate) return;
 
 	CString tmpStr = _T("");
 
 	GetDlgItemText(IDC_EDIT_LINE, tmpStr);
-	UINT numLine = _wtoi(tmpStr);			//선로 번호
+	UINT numLine = "" == tmpStr || "0" == tmpStr ? 1 : _wtoi(tmpStr);		//선로 번호
 	GetDlgItemText(IDC_EDITCirCount, tmpStr);
 	UINT numCirCount = "" == tmpStr || "0" == tmpStr ? 1 : _wtoi(tmpStr);	//순환 횟수
 	BOOL checkCirEnable = ((CButton*)GetDlgItem(IDC_CheckCir))->GetCheck();	//순환 여부
 
-	arg1.hwnd = this->m_hWnd;
-	arg1.type = numLine;
-	arg1.cycleCount = numCirCount;
-	arg1.checkCycleEnable = checkCirEnable;
-	arg1.move = TRUE;
+	m_arg.hwnd = this->m_hWnd;
+	m_arg.type = numLine;
+	m_arg.cycleCount = numCirCount;
+	m_arg.checkCycleEnable = checkCirEnable;
+	m_arg.move = TRUE;
+
+	if (numLine > LINE_NUM)
+	{
+		OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=Create >> Out of Line_Num=-=-=-=-=-=-=-=-=-\r\n"));
+		return;
+	}
+
 	while (TRUE)
 	{
 		if (trainCount < THREAD_NUM)
@@ -133,8 +141,8 @@ void CTrain::OnBnClickedCreate()
 			if (NULL == trainNum.Find(trainCount))
 			{
 				trainNum.AddHead(trainCount);
-				arg1.id = trainCount + 1000;
-				m_thread_move[trainCount] = AfxBeginThread(ThreadMoveTrain, &arg1, THREAD_PRIORITY_NORMAL, 0, 0);
+				m_arg.id = trainCount + 1000;
+				m_thread_move[trainCount] = AfxBeginThread(ThreadMoveTrain, &m_arg, THREAD_PRIORITY_NORMAL, 0, 0);
 				isCreate = TRUE;
 				break;
 			}
@@ -155,7 +163,7 @@ void CTrain::OnBnClickedStart()
 {
 	int suspendCount = 0;	//일시중지 횟수
 	CString editText;
-	UINT m_trainNum;
+	UINT trainNo;
 
 	GetDlgItemText(IDC_EDIT_CONTROL, editText);
 
@@ -171,26 +179,28 @@ void CTrain::OnBnClickedStart()
 				} while (suspendCount > 0);
 			}
 		}
-		GetDlgItem(IDSTART)->EnableWindow(FALSE);
-		GetDlgItem(IDSTOP)->EnableWindow(TRUE);
 	}
 	else
 	{
-		m_trainNum = _wtoi(editText);
+		trainNo = _wtoi(editText) - 1000;
+
+		if (trainNo > (THREAD_NUM - 1) || m_thread_move[trainNo] == NULL)
+		{
+			OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=Start >> NOT EXIST=-=-=-=-=-=-=-=-=-\r\n"));
+			return;
+		}
 
 		do
 		{
-			suspendCount = m_thread_move[(m_trainNum - 1000)]->ResumeThread();
+			suspendCount = m_thread_move[trainNo]->ResumeThread();
 		} while (suspendCount > 0);
-		
-		GetDlgItem(IDSTOP)->EnableWindow(TRUE);
 	}
 }
 
 void CTrain::OnBnClickedStop()
 {
 	CString editText;
-	UINT m_trainNum;
+	UINT trainNo;
 
 	GetDlgItemText(IDC_EDIT_CONTROL, editText);
 
@@ -204,14 +214,18 @@ void CTrain::OnBnClickedStop()
 				
 			}
 		}
-		GetDlgItem(IDSTOP)->EnableWindow(FALSE);
-		GetDlgItem(IDSTART)->EnableWindow(TRUE);
 	}
 	else
 	{
-		m_trainNum = _wtoi(editText);
-		m_thread_move[(m_trainNum - 1000)]->SuspendThread();
-		GetDlgItem(IDSTART)->EnableWindow(TRUE);
+		trainNo = _wtoi(editText) - 1000;
+
+		if (trainNo > (THREAD_NUM - 1) || m_thread_move[trainNo] == NULL)
+		{
+			OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=Stop >> NOT EXIST=-=-=-=-=-=-=-=-=-\r\n"));
+			return;
+		}
+
+		m_thread_move[trainNo]->SuspendThread();
 	}
 }
 
@@ -300,6 +314,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 	int cirCount = 0;			//순환 횟수(증가용)
 	int cirCountText = 1;		//순환 횟수(비교용)
 	BOOL cycleEnable = FALSE;	//순환 가능 여부
+	CString testStr = _T("");	//Test String
 
 	cirCountText = (cycleCount * 2);
 	cycleEnable = checkCycleEnable;
@@ -464,9 +479,6 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 			break;
 		default:
 			OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=CTrain >> DrawObject >> Out of Flag Range=-=-=-=-=-=-=-=-=-\r\n"));
-			dc.Detach();
-			::ReleaseDC(pArg->hwnd, hdc);
-			return 0;
 			break;
 		}
 
@@ -608,26 +620,32 @@ UINT ThreadMoveTrain(LPVOID param)
 	CTrain* pMain = (CTrain*)param;
 	ThreadArg* pArg = (ThreadArg*)param;
 	CBrush brush = RGB(255, 255, 255);
-	UINT errorCode = 10000;
-	DWORD dwResult;
+	UINT trainNo = 10000;
+	DWORD dwResult = 0;
 	int type = pArg->type;
 
 	if (type > 0 && type < 5)
 	{
-		errorCode = DrawObject(pMain, type, pArg->cycleCount, pArg->checkCycleEnable, pArg->id);
+		trainNo = DrawObject(pMain, type, pArg->cycleCount, pArg->checkCycleEnable, pArg->id);
 	}
 	else
 	{
 		OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=CTrain >> ThreadMoveTrain >> Out of ThreadArg.type Range=-=-=-=-=-=-=-=-=-\r\n"));
+		return 1;
 	}
 
-	if (errorCode >= 1000 && errorCode < 10000)
+	if (trainNo >= 1000 && trainNo < 10000)
 	{
-		errorCode -= 1000;
-		::GetExitCodeThread(pMain->m_thread_move[errorCode]->m_hThread, &dwResult);
-		pMain->m_thread_move[errorCode]->m_bAutoDelete;
-		trainNum.RemoveAt(trainNum.Find(errorCode));
+		trainNo -= 1000;
+		GetExitCodeThread(m_thread_move[trainNo]->m_hThread, &dwResult);
+		trainNum.RemoveAt(trainNum.Find(trainNo));
 		trainCount = 0;
+	}
+
+	if (STILL_ACTIVE != dwResult)
+	{
+		OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=CTrain >> ThreadMoveTrain >> Thread Status != STILL_ACTIVE=-=-=-=-=-=-=-=-=-\r\n"));
+		return dwResult;
 	}
 
 	return 0;
