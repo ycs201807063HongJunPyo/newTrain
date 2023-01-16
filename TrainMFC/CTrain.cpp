@@ -95,7 +95,6 @@ BOOL CTrain::OnInitDialog()
 	trainComboList.AddString(_T("3"));
 	trainComboList.AddString(_T("4"));
 	trainComboList.AddString(_T("5"));
-	trainComboList.GetFocus();
 	//ComboBox default
 	trainComboList.SetCurSel(0);
 	return TRUE;  // return TRUE unless you set the focus to a control
@@ -104,12 +103,13 @@ BOOL CTrain::OnInitDialog()
 
 void CTrain::OnBnClickedCreate()
 {
-
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
 	trainAreaFlag = trainComboList.GetCurSel();  // 콤보박스에서 선로 받아오기
-	CString combo;
-	combo.Format(L"%d \n", trainAreaFlag);
-	OutputDebugStringW(combo);
+	/*
+	//에디트 박스에서 선로 받아오기
+	trainAreaFlag = GetDlgItemInt(IDC_EDIT_TRAINNUMBER);
+	trainAreaFlag--;
+	*/
 	//초기값 FALSE 재지정
 	createAllCheck[trainAreaFlag] = FALSE;
 	//열차가 비어있는지, 1번 선로의 경우 들어오는 열차가 있는지 체크하고 있다면 TRUE로 바꿔 생성 금지
@@ -143,6 +143,10 @@ void CTrain::OnBnClickedCreate()
 			curTrainCount++;
 			//열차 갯수 텍스트 바로 보이게 하기
 			InvalidateRect(CRect(150, 450, 350, 550), TRUE);
+
+			CString combo;
+			combo.Format(L"%d라인에 %d개 열차있음\n \n", trainAreaFlag+1, railInTrain[(trainAreaFlag)]);
+			OutputDebugStringW(combo);
 			break;
 		}
 	}
@@ -462,6 +466,7 @@ UINT DrawObject(LPVOID param, int type, UINT numberId)
 					lineWhile = TRUE;
 					trainX = 840;
 					flagChange = 4;
+
 				}
 				Sleep(500);
 				stationCount++;
@@ -653,7 +658,7 @@ UINT ThreadMoveTrain(LPVOID param)
 		break;
 	default:
 		errorCode = 666;
-		OutputDebugStringW(_T("\r\nCTrain >> ThreadMoveTrain >> Out of ThreadArg.type Range\r\n"));
+		OutputDebugStringW(_T("\r\n알 수 없는 값\r\n"));
 		break;
 	}
 	if (errorCode >= 666) {
@@ -670,21 +675,20 @@ UINT ThreadMoveTrain(LPVOID param)
 
 HBRUSH CTrain::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 {
+
 	HBRUSH hbr;
+
 	//글자 배경, 글자 색
-	//STATIC 컨트롤만 배경색 변경
+	//STATIC 컨트롤만 배경색, 글자색 변경
 	if (nCtlColor == CTLCOLOR_STATIC) {
 		pDC->SetBkColor(RGB(0, 0, 0));	//배경색 검정
-	}
-	//text color change
-	if (pWnd->GetDlgCtrlID() == IDC_STATIC_HINT) {
 		pDC->SetTextColor(RGB(255, 255, 255));  //글자색 흰
 	}
 	//콤보박스 색상
 	if (nCtlColor == CTLCOLOR_LISTBOX)
 	{
 		pDC->SetTextColor(RGB(255, 255, 255));
-		pDC->SetBkColor(RGB(0, 0, 0));
+		pDC->SetBkMode(TRANSPARENT);
 	}
 	hbr = (HBRUSH)GetStockObject(NULL_BRUSH);
 	return hbr;
