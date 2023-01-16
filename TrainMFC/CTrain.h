@@ -49,7 +49,7 @@ public:
 	afx_msg void OnBnClickedStop();
 
 	CWinThread* m_thread_move[TRAIN_HAVE_NUM];  //열차 쓰레드
-	ThreadArg arg1[TRAIN_HAVE_NUM];
+	ThreadArg arg1[TRAIN_HAVE_NUM];  //열차 보조 쓰레드
 
 	afx_msg void OnPaint();
 	//배경
