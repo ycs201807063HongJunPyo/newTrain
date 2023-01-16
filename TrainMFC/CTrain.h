@@ -58,4 +58,7 @@ public:
 	
 	CStatic hintText;
 	CComboBox trainComboList;
+	CEdit trainNumControll;
+	afx_msg void OnEnSetfocusEditTrainnumber();
+	CEdit controllTrain;
 };
