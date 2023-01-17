@@ -128,12 +128,6 @@ void CTrain::OnBnClickedCreate()
 	UINT numCirCount = "" == tmpStr || "0" == tmpStr ? 1 : _wtoi(tmpStr);	//순환 횟수
 	BOOL checkCirEnable = ((CButton*)GetDlgItem(IDC_CheckCir))->GetCheck();	//순환 여부
 
-	m_arg.hwnd = this->m_hWnd;
-	m_arg.type = numLine;
-	m_arg.cycleCount = numCirCount;
-	m_arg.checkCycleEnable = checkCirEnable;
-	m_arg.move = TRUE;
-
 	if (numLine > LINE_NUM)
 	{
 		OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=Create >> Out of Line_Num=-=-=-=-=-=-=-=-=-\r\n"));
@@ -160,6 +154,11 @@ void CTrain::OnBnClickedCreate()
 		return;
 	}
 
+	m_arg.hwnd = this->m_hWnd;
+	m_arg.type = numLine;
+	m_arg.cycleCount = numCirCount;
+	m_arg.checkCycleEnable = checkCirEnable;
+
 	while (TRUE)
 	{
 		if (1 != numLine) break;
@@ -178,7 +177,7 @@ void CTrain::OnBnClickedCreate()
 		}
 		else
 		{
-			OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=Max Train Number=-=-=-=-=-=-=-=-=-\r\n"));
+			OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=Max First Train Number=-=-=-=-=-=-=-=-=-\r\n"));
 			return;
 		}
 	}
@@ -334,6 +333,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 	HwndArg* pArg = (HwndArg*)param;
 	CDC dc;
 	HDC hdc = ::GetDC(pArg->hwnd);
+	UINT threadId = (id - 1000);
 	CRect train;			//열차 위치
 	int trainSpeed = 0;		//열차 속도
 	int trainX = 50;		//x기억
@@ -455,7 +455,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 		posY = 160;
 		break;
 	default:
-		return 2;
+		return 0;
 		break;
 	}
 
@@ -472,7 +472,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 	dc.Attach(hdc);
 	
 	while (TRUE) {
-		Sleep(10);	//이동 딜레이
+		WaitForSingleObject(m_thread_move[threadId]->m_hThread, 10);	//이동 딜레이
 
 		if (cirCount == cirCountText)	// 순환 종료 및 반환
 		{
@@ -511,27 +511,31 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 		switch (flag)	//열차 이동
 		{
 		case TrainDirection::Left:
-			moveEnable ? trainSpeed -= 5 : Sleep(10);
+			moveEnable ? trainSpeed -= 5 : WaitForSingleObject(m_thread_move[threadId]->m_hThread, 10);
 			train = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case TrainDirection::Up:
-			moveEnable ? trainSpeed -= 5 : Sleep(10);
+			moveEnable ? trainSpeed -= 5 : WaitForSingleObject(m_thread_move[threadId]->m_hThread, 10);
 			train = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
 			trainY = trainSpeed + trainHeight;
 			break;
 		case TrainDirection::Right:
-			moveEnable ? trainSpeed += 5 : Sleep(10);
+			moveEnable ? trainSpeed += 5 : WaitForSingleObject(m_thread_move[threadId]->m_hThread, 10);
 			train = CRect(trainSpeed + posX, trainY - trainHeight + posY, trainSpeed + trainWidth + posX, trainY + posY);
 			trainX = trainSpeed + trainWidth;
 			break;
 		case TrainDirection::Down:
-			moveEnable ? trainSpeed += 5 : Sleep(10);
+			moveEnable ? trainSpeed += 5 : WaitForSingleObject(m_thread_move[threadId]->m_hThread, 10);
 			train = CRect(trainX - trainWidth + posX, trainSpeed + posY, trainX + posX, trainSpeed + trainHeight + posY);
 			trainY = trainSpeed + trainHeight;
 			break;
 		default:
 			OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=CTrain >> DrawObject >> Out of Flag Range=-=-=-=-=-=-=-=-=-\r\n"));
+			dc.Detach();
+			::ReleaseDC(pArg->hwnd, hdc);
+			pArg = NULL;
+			return 0;
 			break;
 		}
 
@@ -553,10 +557,8 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 			DrawFillRect(param, subStationRect, 255, 0, 0);
 		}
 
-		DrawFillRect(param, stationRect, 0, 255, 0);
+		moveEnable ? DrawFillRect(param, stationRect, 0, 255, 0) : DrawFillRect(param, stationRect, 255, 0, 0);
 		DrawTrainNum(param, train, isReverse, id);
-		testStr.Format(_T("%d >> %d %d\n"), id, insCheck[lineSelect][stationCount], insCheck[lineSelect][stationCount + 1]);
-		OutputDebugStringW(testStr);
 
 		if (stationCount == (count + 1))	// 이동 종료
 		{
@@ -594,7 +596,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 				}
 				DrawFillRect(param, stationRect, 0, 255, 0);
 				DrawTrainNum(param, train, isReverse, id);
-				Sleep(1000);
+				WaitForSingleObject(m_thread_move[threadId]->m_hThread, 1000);
 				isCreate = FALSE;
 				stationCount++;
 			}
@@ -607,7 +609,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 				}
 				DrawFillRect(param, stationRect, 0, 255, 0);
 				DrawTrainNum(param, train, isReverse, id);
-				Sleep(1000);
+				WaitForSingleObject(m_thread_move[threadId]->m_hThread, 1000);
 				isCreate = FALSE;
 				stationCount++;
 			}
@@ -632,7 +634,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 				moveEnable = FALSE;
 				DrawFillRect(param, stationRect, 255, 0, 0);
 				DrawTrainNum(param, train, isReverse, id);
-				Sleep(1000);
+				WaitForSingleObject(m_thread_move[threadId]->m_hThread, 1000);
 				stationCount++;
 			}
 		}
@@ -660,7 +662,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 				moveEnable = FALSE;
 				DrawFillRect(param, stationRect, 255, 0, 0);
 				DrawTrainNum(param, train, isReverse, id);
-				Sleep(1000);
+				WaitForSingleObject(m_thread_move[threadId]->m_hThread, 1000);
 				stationCount++;
 			}
 		}
@@ -686,26 +688,27 @@ UINT ThreadMoveTrain(LPVOID param)
 	CTrain* pMain = (CTrain*)param;
 	ThreadArg* pArg = (ThreadArg*)param;
 	CBrush brush = RGB(255, 255, 255);
-	UINT trainNo = 10000;
+	UINT trainNo = 0;
 	DWORD dwResult = 0;
 	int type = pArg->type;
 
-	if (type > 0 && type < 5)
+	if (type > 0 && type <= LINE_NUM)
 	{
 		trainNo = DrawObject(pMain, type, pArg->cycleCount, pArg->checkCycleEnable, pArg->id);
 	}
 	else
 	{
 		OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=CTrain >> ThreadMoveTrain >> Out of ThreadArg.type Range=-=-=-=-=-=-=-=-=-\r\n"));
-		return 1;
+		return 0;
 	}
 
-	if (trainNo >= 1000 && trainNo < 10000)
+	if (trainNo >= 1000)
 	{
 		trainNo -= 1000;
 		trainNum.RemoveAt(trainNum.Find(trainNo));
 		trainCount = 0;
 		firstTrainCount = 0;
+		return trainNo;
 	}
 	
 	return 0;
