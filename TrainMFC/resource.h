@@ -21,10 +21,12 @@
 #define IDC_EDIT_LINE                   1009
 #define IDC_EDIT_TRAINNUMBER            1009
 #define IDC_STATIC_HINT                 1010
-#define IDC_EDIT_TRAINCYCLE             1011
+#define IDC_EDIT_TRAINNUMBER2           1011
+#define IDC_EDIT_TRAINCOUNT             1011
 #define IDC_COMBO_TRAINNUMBER           1013
 #define IDC_STATIC_TRAINNUMBER          1014
 #define IDC_STATIC_TRAINCREATE          1015
+#define IDC_STATIC_TRAINCOUNT           1016
 
 // Next default values for new objects
 // 

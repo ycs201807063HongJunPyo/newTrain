@@ -17,6 +17,7 @@ struct ThreadArg
 	UINT numberId;  // 스레드 번호
 	BOOL isThreadWork;  // 작업중인 스레드인지 판단
 	BOOL isTrainMove;  // 움직이는 열차인지 판단
+	int moveCount;  // 열차 순환 횟수
 };
 
 struct HwndArg
@@ -53,14 +54,12 @@ public:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC); //배경
 	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor); //글자 색, 글자 배경
 
-
-	CWinThread* m_thread_move[TRAIN_HAVE_NUM];  //열차 쓰레드
 	ThreadArg arg1[TRAIN_HAVE_NUM];  //쓰레드 인자
 
-	
 	CStatic hintText;
 	CComboBox trainComboList;
 	CEdit trainNumControll;
 	afx_msg void OnEnSetfocusEditTrainnumber();
 	CEdit controllTrain;
+	afx_msg void OnCbnSelchangeComboTrainnumber();
 };
