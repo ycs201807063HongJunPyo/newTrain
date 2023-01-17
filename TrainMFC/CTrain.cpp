@@ -214,18 +214,21 @@ void CTrain::OnBnClickedStart()
 	UINT trainNo;			//열차번호(UINT)
 
 	GetDlgItemText(IDC_EDIT_CONTROL, editText);
+	trainNo = _wtoi(editText);
 
 	if ("" == editText || "0" == editText)
 	{
 		for (int i = 0; i < THREAD_NUM; i++)
-		{
-			if (m_thread_move[i] != NULL)
+		{			
+			trainNo += i;
+			if (NULL != trainNum.Find(trainNo))
 			{
 				do
 				{
 					suspendCount = m_thread_move[i]->ResumeThread();
 				} while (suspendCount > 0);
 			}
+			trainNo -= i;
 		}
 	}
 	else
@@ -251,16 +254,18 @@ void CTrain::OnBnClickedStop()
 	UINT trainNo;		//열차번호(UINT)
 
 	GetDlgItemText(IDC_EDIT_CONTROL, editText);
+	trainNo = _wtoi(editText);
 
 	if ("" == editText || "0" == editText)
 	{
 		for (int i = 0; i < THREAD_NUM; i++)
 		{
-			if (NULL != m_thread_move[i])
+			trainNo += i;
+			if (NULL != trainNum.Find(trainNo))
 			{
 				m_thread_move[i]->SuspendThread();
-				
 			}
+			trainNo -= i;
 		}
 	}
 	else
@@ -554,7 +559,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 		}
 		else if ((IntersectRect(interRect, train, subStationRect) && subStationCount >= 0) || 0 == lineSelect && moveEnable)
 		{
-			DrawFillRect(param, subStationRect, 255, 0, 0);
+			DrawFillRect(param, subStationRect, 0, 255, 0);
 		}
 
 		moveEnable ? DrawFillRect(param, stationRect, 0, 255, 0) : DrawFillRect(param, stationRect, 255, 0, 0);
