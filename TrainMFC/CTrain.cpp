@@ -90,7 +90,6 @@ BEGIN_MESSAGE_MAP(CTrain, CDialog)
 	ON_WM_PAINT()
 	ON_WM_ERASEBKGND()
 	ON_WM_CTLCOLOR()
-	ON_EN_SETFOCUS(IDC_EDIT_TRAINNUMBER, &CTrain::OnEnSetfocusEditTrainnumber)
 	ON_CBN_SELCHANGE(IDC_COMBO_TRAINNUMBER, &CTrain::OnCbnSelchangeComboTrainnumber)
 END_MESSAGE_MAP()
 
@@ -112,7 +111,7 @@ BOOL CTrain::OnInitDialog()
 	//ComboBox default
 	trainComboList.SetCurSel(0);
 	//에디트박스 기본값
-	SetDlgItemInt(IDC_EDIT_TRAINNUMBER, -1);  //출발, 정지 버튼 에디트 박스
+	SetDlgItemInt(IDC_EDIT_TRAINNUMBER, 9);  //출발, 정지 버튼 에디트 박스
 	SetDlgItemInt(IDC_EDIT_TRAINCOUNT, 1);  //반복 에디트 박스
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
@@ -761,11 +760,11 @@ HBRUSH CTrain::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 		pDC->SetBkColor(RGB(0, 0, 0));	//배경색 검정
 		pDC->SetTextColor(RGB(255, 255, 255));  //글자색 흰
 	}
-	//에디트 박스
-	if (pWnd->GetDlgCtrlID() == IDC_EDIT_TRAINNUMBER)
+	//에디트 박스 배경, 글자 변경
+	if (pWnd->GetDlgCtrlID() == IDC_EDIT_TRAINCOUNT || pWnd->GetDlgCtrlID() == IDC_EDIT_TRAINNUMBER)
 	{
-		pDC->SetBkColor(RGB(0, 0, 0));	//배경색 검정
-		pDC->SetTextColor(RGB(255, 255, 255));  //글자색 흰
+		pDC->SetBkColor(RGB(255, 255, 255));
+		pDC->SetTextColor(RGB(0, 0, 0));
 	}
 	//콤보박스 색상
 	if (nCtlColor == CTLCOLOR_LISTBOX)
@@ -777,21 +776,11 @@ HBRUSH CTrain::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 	return hbr;
 }
 
-void CTrain::OnEnSetfocusEditTrainnumber()
-{
-	//에디트 박스 클릭하면 -1로 전체 출발, 정지 설정해주기
-	//SetDlgItemInt(IDC_EDIT_TRAINNUMBER, -1);
-	controllTrain.SetSel(0, -1, TRUE);
-	//controllTrain.Clear();
-}
-
-
 void CTrain::OnCbnSelchangeComboTrainnumber()
 {
 	int selectCombo = trainComboList.GetCurSel();
-	//1,3 선로면 기본값 1로주고 리드 온리 해제
+	//1,3 선로면 값 그대로 두고 리드 온리 해제
 	if (selectCombo == RailFlag::ONE || selectCombo == RailFlag::THREE) {
-		SetDlgItemInt(IDC_EDIT_TRAINCOUNT, 1);
 		GetDlgItem(IDC_EDIT_TRAINCOUNT)->SendMessage(EM_SETREADONLY, (WPARAM)FALSE, (LPARAM)0);
 	}
 	//다른 선로면 기본값 1로주고 리드 온리 설정

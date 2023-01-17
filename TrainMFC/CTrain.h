@@ -53,13 +53,13 @@ public:
 	afx_msg void OnPaint();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC); //배경
 	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor); //글자 색, 글자 배경
+	afx_msg void OnCbnSelchangeComboTrainnumber();  //콤보박스 값 바꿧을때(에디트박스 읽기 전용 판단)
 
 	ThreadArg arg1[TRAIN_HAVE_NUM];  //쓰레드 인자
 
 	CStatic hintText;
 	CComboBox trainComboList;
 	CEdit trainNumControll;
-	afx_msg void OnEnSetfocusEditTrainnumber();
 	CEdit controllTrain;
-	afx_msg void OnCbnSelchangeComboTrainnumber();
+	
 };
