@@ -477,6 +477,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 		if (cirCount == cirCountText)	// 순환 종료 및 반환
 		{
 			InvalidateRect(pArg->hwnd, subStationRect, TRUE);
+			insCheck[lineSelect][subStationCount] = FALSE;
 			if (0 == lineSelect)
 			{
 				firstTrainNum.RemoveAt(firstTrainNum.Find(firstLineNum));
@@ -536,10 +537,12 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 
 		stationRect = CRect(TrailLeft[stationCount], TrailTop[stationCount], TrailRight[stationCount], TrailBottom[stationCount]);
 		subStationRect = CRect(TrailLeft[subStationCount], TrailTop[subStationCount], TrailRight[subStationCount], TrailBottom[subStationCount]);
-		IntersectRect(interRect, train, stationRect) && stationCount >= 0 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
+		//IntersectRect(interRect, train, stationRect) && stationCount >= 0 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
 		
 		if (IntersectRect(interRect, train, stationRect) && stationCount >= 0 && moveEnable)
 		{
+			insCheck[lineSelect][stationCount] = TRUE;
+			insCheck[lineSelect][subStationCount] = FALSE;
 			//이전역 부분과 충돌이 있을경우에만 무효화 해주기
 			if ((!insCheck[lineSelect][subStationCount] && stationCount >= 1) || 0 == lineSelect)
 			{
@@ -549,11 +552,12 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 		else if ((IntersectRect(interRect, train, subStationRect) && subStationCount >= 0) || 0 == lineSelect && moveEnable)
 		{
 			DrawFillRect(param, subStationRect, 255, 0, 0);
-			insCheck[lineSelect][subStationCount] = FALSE;
 		}
 
 		DrawFillRect(param, stationRect, 0, 255, 0);
 		DrawTrainNum(param, train, isReverse, id);
+		testStr.Format(_T("%d >> %d %d\n"), id, insCheck[lineSelect][stationCount], insCheck[lineSelect][stationCount + 1]);
+		OutputDebugStringW(testStr);
 
 		if (stationCount == (count + 1))	// 이동 종료
 		{
@@ -569,6 +573,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 			else
 			{
 				InvalidateRect(pArg->hwnd, subStationRect, TRUE);
+				insCheck[lineSelect][subStationCount] = FALSE;
 				if (0 == lineSelect)
 				{
 					firstTrainNum.RemoveAt(firstTrainNum.Find(firstLineNum));
@@ -620,7 +625,6 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 
 			flag = stationRect.top != subStationRect.top && stationRect.top > subStationRect.top ? TrainDirection::Down : TrainDirection::Up;	// T(4) : 하, F(2) : 상
 			moveEnable = insCheck[lineSelect][stationCount + 1] ? FALSE : TRUE;
-			insCheck[lineSelect][subStationCount] = moveEnable ? FALSE : TRUE;
 
 			if ((trainHeight + trainSpeed + posY) == (stationRect.bottom - 10))	// 일정거리 이동 후 정지
 			{
@@ -644,7 +648,6 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 
 			flag = stationRect.left != subStationRect.left && stationRect.left < subStationRect.left ? TrainDirection::Left : TrainDirection::Right;	// T(1) : 좌, F(3) : 우
 			moveEnable = insCheck[lineSelect][stationCount + 1] && 0 != lineSelect ? FALSE : TRUE;
-			insCheck[lineSelect][subStationCount] = moveEnable ? FALSE : TRUE;
 
 			if (!moveEnable)
 			{
@@ -666,7 +669,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 			stationCount++;
 		}
 
-		if (3 == stationCount)	// 초기 시작 충돌 방지
+		if (3 == stationCount && !insCheck[lineSelect][subStationCount])	// 초기 시작 충돌 방지
 		{
 			startInsCheck[lineSelect] = FALSE;
 		}
@@ -674,6 +677,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 	
 	dc.Detach();
 	::ReleaseDC(pArg->hwnd, hdc);
+	pArg = NULL;
 	return id;
 }
 
@@ -699,17 +703,10 @@ UINT ThreadMoveTrain(LPVOID param)
 	if (trainNo >= 1000 && trainNo < 10000)
 	{
 		trainNo -= 1000;
-		GetExitCodeThread(m_thread_move[trainNo]->m_hThread, &dwResult);
 		trainNum.RemoveAt(trainNum.Find(trainNo));
 		trainCount = 0;
 		firstTrainCount = 0;
 	}
-
-	if (STILL_ACTIVE != dwResult)
-	{
-		OutputDebugStringW(_T("\r\n-=-=-=-=-=-=-=-=-=CTrain >> ThreadMoveTrain >> Thread Not ACTIVE=-=-=-=-=-=-=-=-=-\r\n"));
-		return dwResult;
-	}
-
+	
 	return 0;
 }
