@@ -8,6 +8,8 @@
 #define LONG_RAIL_NUM 20	// 레일 개수
 #define SUB_RAIL_NUM 7	// 레일 개수
 
+#define PUBLIC_RAIL 4  // 4,5호선 공용 선로 구간
+
 struct ThreadArg
 {
 	HWND hwnd;
@@ -53,7 +55,7 @@ public:
 
 
 	CWinThread* m_thread_move[TRAIN_HAVE_NUM];  //열차 쓰레드
-	ThreadArg arg1[TRAIN_HAVE_NUM];  //열차 보조 쓰레드
+	ThreadArg arg1[TRAIN_HAVE_NUM];  //쓰레드 인자
 
 	
 	CStatic hintText;
