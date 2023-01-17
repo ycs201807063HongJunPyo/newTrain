@@ -440,10 +440,10 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 
 			if (i > 13)
 			{
-				TrailLeft[i] = thirdRailLeft[i - 14];
-				TrailTop[i] = thirdRailTop[i - 14];
-				TrailRight[i] = thirdRailRight[i - 14];
-				TrailBottom[i] = thirdRailBottom[i - 14];
+				TrailLeft[i] = thirdRailLeft[i - 13];
+				TrailTop[i] = thirdRailTop[i - 13];
+				TrailRight[i] = thirdRailRight[i - 13];
+				TrailBottom[i] = thirdRailBottom[i - 13];
 			}
 
 			if (0 == TrailLeft[i] && 0 == TrailRight[i])
@@ -537,7 +537,6 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 
 		stationRect = CRect(TrailLeft[stationCount], TrailTop[stationCount], TrailRight[stationCount], TrailBottom[stationCount]);
 		subStationRect = CRect(TrailLeft[subStationCount], TrailTop[subStationCount], TrailRight[subStationCount], TrailBottom[subStationCount]);
-		//IntersectRect(interRect, train, stationRect) && stationCount >= 0 ? insCheck[lineSelect][stationCount] = TRUE : NULL;
 		
 		if (IntersectRect(interRect, train, stationRect) && stationCount >= 0 && moveEnable)
 		{
@@ -563,6 +562,7 @@ UINT DrawObject(LPVOID param, int type, UINT cycleCount, BOOL checkCycleEnable, 
 		{
 			if (cycleEnable)
 			{
+				insCheck[lineSelect][subStationCount] = FALSE;
 				isReverse = isReverse ? FALSE : TRUE;
 				stationCount = 1;
 				subStationCount = 0;
