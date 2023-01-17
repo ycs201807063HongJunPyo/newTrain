@@ -5,7 +5,7 @@
 #define TRAIN_HAVE_NUM 9 // 열차 개수
 
 #define RAIL_NUM 13	// 레일 개수
-#define LONG_RAIL_NUM 20	// 레일 개수
+#define LONG_RAIL_NUM 21	// 레일 개수
 #define SUB_RAIL_NUM 7	// 레일 개수
 
 #define PUBLIC_RAIL 4  // 4,5호선 공용 선로 구간
