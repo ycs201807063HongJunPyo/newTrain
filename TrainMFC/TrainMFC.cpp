@@ -183,9 +183,3 @@ void CTrainMFCApp::OnAppAbout()
 	CAboutDlg aboutDlg;
 	aboutDlg.DoModal();
 }
-
-
-// CTrainMFCApp 메시지 처리기
-
-
-

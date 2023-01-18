@@ -50,6 +50,7 @@ public:
 	afx_msg void OnBnClickedCreate();
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedStop();
+	afx_msg void OnBnClickedInfo();
 	afx_msg void OnPaint();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC); //배경
 	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor); //글자 색, 글자 배경
@@ -61,5 +62,7 @@ public:
 	CComboBox trainComboList;
 	CEdit trainNumControll;
 	CEdit controllTrain;
+	
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	
 };
